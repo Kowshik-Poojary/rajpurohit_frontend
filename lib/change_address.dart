@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class address extends StatefulWidget {
   const address({super.key});
 
@@ -12,7 +14,7 @@ class address extends StatefulWidget {
 
 class _addressState extends State<address> {
   TextEditingController _addressController = TextEditingController();
-  String apiUrl = 'https://rajpurohit-backend.onrender.com';
+  String apiUrl = '${ApiConfig.baseUrl}';
 
   @override
   void initState() {
@@ -22,7 +24,7 @@ class _addressState extends State<address> {
 
   Future<void> fetchAddress() async {
     try {
-      final response = await http.get(Uri.parse('https://rajpurohit-backend.onrender.com/get-address'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-address'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _addressController.text = data['address'];
@@ -37,7 +39,7 @@ class _addressState extends State<address> {
   Future<void> updateAddress() async {
     try {
       final response = await http.put(
-        Uri.parse('https://rajpurohit-backend.onrender.com/update-address'),
+        Uri.parse('${ApiConfig.baseUrl}/update-address'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'address': _addressController.text}),
       );

@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class EditPaymentStatusPage extends StatefulWidget {
   final int podId; // ID of the record
   final String currentStatus;
@@ -19,7 +21,7 @@ class EditPaymentStatusPage extends StatefulWidget {
 
 class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
   String? _selectedStatus;
-  final String apiUrl = 'https://rajpurohit-backend.onrender.com'; // replace with your IP
+  final String apiUrl = '${ApiConfig.baseUrl}'; // replace with your IP
 
   Future<void> showLoginPrompt() async {
     final TextEditingController usernameController = TextEditingController();

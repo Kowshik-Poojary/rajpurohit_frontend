@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class EditVolWeightPage extends StatefulWidget {
   final int podId;
   final String currentVolWeight;
@@ -24,7 +26,7 @@ class _EditVolWeightPageState extends State<EditVolWeightPage> {
   final TextEditingController _volWeightController = TextEditingController();
   final TextEditingController _rateController = TextEditingController();
 
-  final String apiUrl = 'https://rajpurohit-backend.onrender.com'; // your backend IP
+  final String apiUrl = '${ApiConfig.baseUrl}'; // your backend IP
 
   @override
   void initState() {
@@ -40,7 +42,7 @@ class _EditVolWeightPageState extends State<EditVolWeightPage> {
 
     final amount = (volWeight > 0 ? volWeight : fallbackWeight) * rate;
 
-    final url = Uri.parse('https://rajpurohit-backend.onrender.com/update-volweight/${widget.podId}');
+    final url = Uri.parse('${ApiConfig.baseUrl}/update-volweight/${widget.podId}');
     try {
       final response = await http.put(
         url,

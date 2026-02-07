@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class origin_destination extends StatefulWidget {
   const origin_destination({super.key});
 
@@ -14,7 +16,7 @@ class _origin_destinationState extends State<origin_destination> {
 
   List<String> locations = [];
   final TextEditingController _newLocationController = TextEditingController();
-  final String apiUrl = 'https://rajpurohit-backend.onrender.com';
+  final String apiUrl = '${ApiConfig.baseUrl}';
 
   @override
   void initState() {

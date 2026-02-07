@@ -4,6 +4,7 @@ import 'package:rajpurohit/sidebar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'EditVolWeightPage.dart';
+import 'config/api.dart';
 import 'pod_data.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
@@ -43,7 +44,7 @@ class _previous_dataState extends State<previous_data> {
 
 
   Future<void> fetchPods() async {
-    final url = Uri.parse("https://rajpurohit-backend.onrender.com/get-all-pods"); // ✅ update IP as needed
+    final url = Uri.parse("${ApiConfig.baseUrl}/get-all-pods"); // ✅ update IP as needed
     final response = await http.get(url);
 
     if (response.statusCode == 200) {

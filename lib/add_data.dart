@@ -10,6 +10,8 @@ import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class PodData {
   final int id;
   final String date;
@@ -98,14 +100,14 @@ class _add_dataState extends State<add_data> {
   String? selectedOption;
   PodData? submittedPod;
   String address = '';
-  String apiUrl = 'https://rajpurohit-backend.onrender.com';
+  String apiUrl = '${ApiConfig.baseUrl}';
   List<String> locationOptions = [];
   String? _origin;
   String? _destination;
   List<String> nameSuggestions = [];
 
   Future<void> fetchSuggestions() async {
-    final response = await http.get(Uri.parse('https://rajpurohit-backend.onrender.com/get-suggestions'));
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-suggestions'));
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
@@ -120,7 +122,7 @@ class _add_dataState extends State<add_data> {
 
   Future<void> fetchLocations() async {
     try {
-      final response = await http.get(Uri.parse('https://rajpurohit-backend.onrender.com/get-locations'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-locations'));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -138,7 +140,7 @@ class _add_dataState extends State<add_data> {
 
   Future<void> fetchSenders() async {
     try {
-      final response = await http.get(Uri.parse('https://rajpurohit-backend.onrender.com/get-senders'));
+      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-senders'));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
@@ -166,7 +168,7 @@ class _add_dataState extends State<add_data> {
   }
 
   Future<String> fetchAddress() async {
-    final response = await http.get(Uri.parse('https://rajpurohit-backend.onrender.com/get-address'));
+    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-address'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data['address'];
@@ -611,7 +613,7 @@ class _add_dataState extends State<add_data> {
       return;
     }
 
-    var url = Uri.parse("https://rajpurohit-backend.onrender.com/submitpod");
+    var url = Uri.parse("${ApiConfig.baseUrl}/submitpod");
 
     var response = await http.post(
       url,
