@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
 class PodData {
-  final String id;
+  final int podNumber;
   final String from;
   final String to;
   final String doc;
@@ -16,7 +16,7 @@ class PodData {
   final String formattedDate;
 
   PodData({
-    required this.id,
+    required this.podNumber,
     required this.from,
     required this.to,
     required this.doc,
@@ -44,7 +44,7 @@ class PodData {
     }
 
     return PodData(
-      id: json['id']?.toString() ?? '',
+      podNumber: json['podNumber'] ?? 0,
       from: json['from1'] ?? '',
       to: json['to1'] ?? '',
       origin: json['origin'] ?? '',

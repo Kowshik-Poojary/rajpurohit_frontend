@@ -13,7 +13,7 @@ import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 import 'config/api.dart';
 
 class PodData {
-  final int id;
+  final String id;
   final String date;
   final String formattedDate;
   final String from;

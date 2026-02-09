@@ -19,7 +19,7 @@ class _sidebarState extends State<sidebar> {
     final TextEditingController passwordController = TextEditingController();
 
     Map<String, String> credentials = {
-      'rajpurohit': '1008',
+      'Rajpurohit': '1008',
       'mahendra': '9892',
     };
 
