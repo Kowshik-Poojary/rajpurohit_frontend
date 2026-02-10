@@ -13,7 +13,7 @@ import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 import 'config/api.dart';
 
 class PodData {
-  final String id;
+  final int podNumber;
   final String date;
   final String formattedDate;
   final String from;
@@ -29,7 +29,7 @@ class PodData {
   final String sender;
 
   PodData({
-    required this.id,
+    required this.podNumber,
     required this.date,
     required this.formattedDate,
     required this.from,
@@ -265,7 +265,7 @@ class _add_dataState extends State<add_data> {
                                   child: pw.Row(
                                       children: [
                                         pw.Text('AWB no. - '),
-                                        pw.Text('${pod.id}')
+                                        pw.Text('${pod.podNumber}')
                                       ]
                                   ))
                             ]
@@ -638,7 +638,7 @@ class _add_dataState extends State<add_data> {
 
       // Extract values from backend response
       PodData pod = PodData(
-        id: data['id'],
+        podNumber: data['podNumber'],
         date: data['date1'],
         formattedDate: DateFormat('d-MM-yyyy').format(DateTime.parse(data['date1'])),
         from: data['from1'],
