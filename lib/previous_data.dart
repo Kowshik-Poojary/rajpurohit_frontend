@@ -4,6 +4,7 @@ import 'package:rajpurohit/sidebar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'EditVolWeightPage.dart';
+import 'config/api.dart';
 import 'pod_data.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
@@ -43,7 +44,7 @@ class _previous_dataState extends State<previous_data> {
 
 
   Future<void> fetchPods() async {
-    final url = Uri.parse("https://rajpurohit-backend.onrender.com/get-all-pods"); // ✅ update IP as needed
+    final url = Uri.parse("${ApiConfig.baseUrl}/get-all-pods"); // ✅ update IP as needed
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
@@ -66,8 +67,7 @@ class _previous_dataState extends State<previous_data> {
         bool matchesDestination = destinationController.text.isEmpty || pod.destination.toLowerCase().contains(destinationController.text.toLowerCase());
         bool matchesFrom = fromController.text.isEmpty || pod.from.toLowerCase().contains(fromController.text.toLowerCase());
         bool matchesTo = toController.text.isEmpty || pod.to.toLowerCase().contains(toController.text.toLowerCase());
-        bool matchesID = idController.text.isEmpty || pod.id.contains(idController.text);
-
+        bool matchesID = idController.text.isEmpty || pod.podNumber.toString().contains(idController.text);
         bool matchesStatus = selectedStatus == null || selectedStatus == 'All' || pod.status == selectedStatus;
 
         bool matchesDate = true;
@@ -114,14 +114,14 @@ class _previous_dataState extends State<previous_data> {
 
     // Add header
     sheet.appendRow([
-      'ID', 'Date', 'From', 'To', 'Origin', 'Destination',
+      'POD No.', 'Date', 'From', 'To', 'Origin', 'Destination',
       'Doc', 'Weight', 'Vol Weight', 'Pieces', 'Amount', 'Status', 'Sender'
     ]);
 
     // Add data
     for (var pod in filteredList) {
       sheet.appendRow([
-        pod.id,
+        pod.podNumber,
         pod.formattedDate,
         pod.from,
         pod.to,
@@ -185,7 +185,7 @@ class _previous_dataState extends State<previous_data> {
         dataRowColor: MaterialStateColor.resolveWith((states) => Colors.grey.shade100),
         columnSpacing: 20,
         columns: const [
-          DataColumn(label: Text('ID')),
+          DataColumn(label: Text('POD No.')),
           DataColumn(label: Text('Date')),
           DataColumn(label: Text('From')),
           DataColumn(label: Text('To')),
@@ -201,7 +201,7 @@ class _previous_dataState extends State<previous_data> {
         ],
         rows: filteredList.map((pod) {
           return DataRow(cells: [
-            DataCell(Text(pod.id)),
+            DataCell(Text("POD-${pod.podNumber}")),
             DataCell(Text(pod.formattedDate)),
             DataCell(Text(pod.from)),
             DataCell(Text(pod.to)),
@@ -221,7 +221,7 @@ class _previous_dataState extends State<previous_data> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => EditVolWeightPage(
-                            podId: int.parse(pod.id),
+                            podId: pod.podNumber,
                             currentVolWeight: pod.volWeight,
                             weight: int.parse(pod.weight), // ⬅️ pass original weight
                           ),
@@ -248,7 +248,7 @@ class _previous_dataState extends State<previous_data> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => EditPaymentStatusPage(
-                            podId: int.parse(pod.id),
+                            podId: pod.podNumber,
                             currentStatus: pod.status,
                           ),
                         ),
@@ -290,7 +290,7 @@ class _previous_dataState extends State<previous_data> {
                   controller: idController,
                   onChanged: (_) => filterTable(),
                   decoration: InputDecoration(
-                    labelText: 'Search by ID',
+                    labelText: 'Search by POD No.',
                     border: OutlineInputBorder(),
                   ),
                 ),

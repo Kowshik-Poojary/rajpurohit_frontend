@@ -3,6 +3,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
+import 'config/api.dart';
+
 class sender extends StatefulWidget {
   const sender({super.key});
 
@@ -14,7 +16,7 @@ class _senderState extends State<sender> {
 
   List<String> senders = [];
   final TextEditingController _senderController = TextEditingController();
-  final String apiUrl = 'https://rajpurohit-backend.onrender.com';
+  final String apiUrl = '${ApiConfig.baseUrl}';
 
   @override
   void initState() {

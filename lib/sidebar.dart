@@ -3,6 +3,8 @@ import 'package:rajpurohit/add_data.dart';
 import 'package:rajpurohit/main.dart';
 import 'package:rajpurohit/previous_data.dart';
 import 'package:rajpurohit/settings.dart';
+
+import 'Homepage.dart';
 class sidebar extends StatefulWidget {
   const sidebar({super.key});
 
@@ -17,7 +19,7 @@ class _sidebarState extends State<sidebar> {
     final TextEditingController passwordController = TextEditingController();
 
     Map<String, String> credentials = {
-      'rajpurohit': '1008',
+      'Rajpurohit': '1008',
       'mahendra': '9892',
     };
 
