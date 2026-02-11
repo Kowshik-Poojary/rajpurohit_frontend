@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
 import 'config/api.dart';
@@ -46,17 +46,22 @@ class PodData {
   });
 }
 
-
 class CommonTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
   final TextInputType keyboardType;
+  final TextInputAction textInputAction;
+  final FocusNode focusNode;
+  final FocusNode? nextFocus;
 
   const CommonTextField({
     super.key,
     required this.hintText,
     required this.controller,
+    required this.focusNode,
+    this.nextFocus,
     this.keyboardType = TextInputType.text,
+    this.textInputAction = TextInputAction.next,
   });
 
   @override
@@ -64,7 +69,13 @@ class CommonTextField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      textInputAction: TextInputAction.next,
       style: const TextStyle(color: Color(0xff2a3368)),
+      onSubmitted: (_) {
+        if (nextFocus != null) {
+          FocusScope.of(context).requestFocus(nextFocus);
+        }
+      },
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: const TextStyle(color: Color(0xff2a3368)),
@@ -72,7 +83,9 @@ class CommonTextField extends StatelessWidget {
           borderSide: BorderSide(color: Colors.black),
         ),
         focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.blueAccent), // Border color when focused
+          borderSide: BorderSide(
+            color: Colors.blueAccent,
+          ), // Border color when focused
         ),
       ),
     );
@@ -94,6 +107,17 @@ class _add_dataState extends State<add_data> {
   final TextEditingController _volweight = TextEditingController();
   final TextEditingController _piece = TextEditingController();
   final TextEditingController _rate = TextEditingController();
+  final FocusNode _fromFocus = FocusNode();
+  final FocusNode _toFocus = FocusNode();
+  final FocusNode _originFocus = FocusNode();
+  final FocusNode _destinationFocus = FocusNode();
+  final FocusNode _weightFocus = FocusNode();
+  final FocusNode _volWeightFocus = FocusNode();
+  final FocusNode _pieceFocus = FocusNode();
+  final FocusNode _rateFocus = FocusNode();
+  final FocusNode _senderFocus = FocusNode();
+  final FocusNode _submitFocus = FocusNode();
+
   int _amount = 0;
   String selected_status = 'Unpaid';
   List<String> senderOptions = [];
@@ -107,28 +131,36 @@ class _add_dataState extends State<add_data> {
   List<String> nameSuggestions = [];
 
   Future<void> fetchSuggestions() async {
-    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-suggestions'));
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/get-suggestions'),
+    );
 
     if (response.statusCode == 200) {
       final List<dynamic> data = json.decode(response.body);
       setState(() {
-        nameSuggestions = data.map((e) => e['name'].toString()).toSet().toList(); // ensure uniqueness
+        nameSuggestions = data
+            .map((e) => e['name'].toString())
+            .toSet()
+            .toList(); // ensure uniqueness
       });
     } else {
       print('❌ Failed to fetch suggestions');
     }
   }
 
-
   Future<void> fetchLocations() async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-locations'));
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/get-locations'),
+      );
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
           locationOptions = data.map((e) => e['city_name'] as String).toList();
-          if (_origin == null && locationOptions.isNotEmpty) _origin = locationOptions[0];
-          if (_destination == null && locationOptions.length > 1) _destination = locationOptions[1];
+          if (_origin == null && locationOptions.isNotEmpty)
+            _origin = locationOptions[0];
+          if (_destination == null && locationOptions.length > 1)
+            _destination = locationOptions[1];
         });
       } else {
         print('Failed to load cities');
@@ -140,11 +172,15 @@ class _add_dataState extends State<add_data> {
 
   Future<void> fetchSenders() async {
     try {
-      final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-senders'));
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/get-senders'),
+      );
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         setState(() {
-          senderOptions = data.map<String>((e) => e['name'].toString()).toList();
+          senderOptions = data
+              .map<String>((e) => e['name'].toString())
+              .toList();
           if (selectedOption == null && senderOptions.isNotEmpty) {
             selectedOption = senderOptions[0]; // set default
           }
@@ -157,18 +193,19 @@ class _add_dataState extends State<add_data> {
     }
   }
 
-
   @override
   void initState() {
-  super.initState();
-  fetchAddress();
-  fetchLocations();
-  fetchSenders();
-  fetchSuggestions();
+    super.initState();
+    fetchAddress();
+    fetchLocations();
+    fetchSenders();
+    fetchSuggestions();
   }
 
   Future<String> fetchAddress() async {
-    final response = await http.get(Uri.parse('${ApiConfig.baseUrl}/get-address'));
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/get-address'),
+    );
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       return data['address'];
@@ -178,7 +215,10 @@ class _add_dataState extends State<add_data> {
     }
   }
 
-  Future<void> generateAndPreviewInvoice(BuildContext context, PodData pod) async{
+  Future<void> generateAndPreviewInvoice(
+    BuildContext context,
+    PodData pod,
+  ) async {
     final fetchedAddress = await fetchAddress();
     print("Generating PDF with address: $fetchedAddress");
     Navigator.push(
@@ -187,12 +227,13 @@ class _add_dataState extends State<add_data> {
         builder: (_) => Scaffold(
           appBar: AppBar(title: Text('Invoice Preview')),
           body: PdfPreview(
-            build: (format) => _generatePdf(format, pod, fetchedAddress ),
+            build: (format) => _generatePdf(format, pod, fetchedAddress),
           ),
         ),
       ),
     );
   }
+
   pw.Widget buildInvoice(PodData pod, pw.ImageProvider image, String address) {
     return pw.Padding(
       padding: const pw.EdgeInsets.all(5),
@@ -203,355 +244,468 @@ class _add_dataState extends State<add_data> {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Row(
-                  children: [
-                    pw.Container(
-                      width: 160,
-                      height: 80,
-                      decoration: pw.BoxDecoration(
-                          border:pw.Border.all(width: 1)
-                      ),
-                      child: pw.Stack(
+                children: [
+                  pw.Container(
+                    width: 160,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+                    child: pw.Stack(
+                      children: [
+                        pw.Image(image),
+                        pw.Column(
+                          mainAxisAlignment: pw.MainAxisAlignment.end,
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
-                            pw.Image(image),
-                            pw.Column(
-                                mainAxisAlignment: pw.MainAxisAlignment.end,
-                                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                                children: [
-                                  pw.Text('    M/S JOGSINGH.A.RAJPUROHIT', style: pw.TextStyle(fontSize: 9)),
-                                  pw.Text('GSTIN 27BUXPS4675M1ZA', style: pw.TextStyle(fontSize: 8))
-                                ]
-                            )
-                          ]
+                            pw.Text(
+                              '    M/S JOGSINGH.A.RAJPUROHIT',
+                              style: pw.TextStyle(fontSize: 9),
+                            ),
+                            pw.Text(
+                              'GSTIN 27BUXPS4675M1ZA',
+                              style: pw.TextStyle(fontSize: 8),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    width: 120,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 4,
+                    ),
+                    child: pw.Text(address, style: pw.TextStyle(fontSize: 10)),
+                  ),
+                  pw.Container(
+                    width: 140,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+
+                    child: pw.Column(
+                      children: [
+                        pw.Container(
+                          width: 140,
+                          height: 40,
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: pw.Row(
+                            children: [
+                              pw.Text('Date - '),
+                              pw.Text(pod.formattedDate),
+                            ],
+                          ),
+                        ),
+                        pw.Container(
+                          width: 140,
+                          height: 40,
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 4,
+                            vertical: 4,
+                          ),
+                          child: pw.Row(
+                            children: [
+                              pw.Text('AWB no. - '),
+                              pw.Text('${pod.podNumber}'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    width: 140,
+                    height: 80,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+                    child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Container(
+                          width: 140,
+                          height: 20,
+
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                            color: PdfColor.fromInt(0xff2a3368),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 1,
+                          ),
+                          child: pw.Text(
+                            'Origin',
+                            style: pw.TextStyle(color: PdfColors.white),
+                          ),
+                        ),
+                        pw.Container(
+                          width: 140,
+                          height: 20,
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 1,
+                          ),
+                          child: pw.Text(pod.origin),
+                        ),
+                        pw.Container(
+                          width: 140,
+                          height: 20,
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                            color: PdfColor.fromInt(0xff2a3368),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 1,
+                          ),
+                          child: pw.Text(
+                            'Destination',
+                            style: pw.TextStyle(color: PdfColors.white),
+                          ),
+                        ),
+                        pw.Container(
+                          width: 140,
+                          height: 20,
+                          decoration: pw.BoxDecoration(
+                            border: pw.Border.all(width: 1),
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 1,
+                          ),
+                          child: pw.Text(pod.destination),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.Row(
+                children: [
+                  pw.Container(
+                    width: 280,
+                    height: 60,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('From'),
+                        pw.SizedBox(height: 5),
+                        pw.Text(
+                          pod.from,
+                          style: pw.TextStyle(
+                            fontSize: 15,
+                            color: PdfColor.fromInt(0xff2a3368),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  pw.Container(
+                    width: 280,
+                    height: 60,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
+                    ),
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('To'),
+                        pw.SizedBox(height: 5),
+                        pw.Text(
+                          pod.to,
+                          style: pw.TextStyle(
+                            fontSize: 15,
+                            color: PdfColor.fromInt(0xff2a3368),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              pw.Row(
+                children: [
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Contents',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
                       ),
-                    ),
-                    pw.Container(
-                        width: 120,
-                        height: 80,
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
                         decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
+                          border: pw.Border.all(width: 1),
                         ),
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        child: pw.Text(address, style: pw.TextStyle(fontSize: 10, ))
-                    ),
-                    pw.Container(
-                        width: 140,
-                        height: 80,
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(pod.doc),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
                         decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
                         ),
-
-                        child: pw.Column(
-                            children: [
-                              pw.Container(
-                                width: 140,
-                                height: 40,
-                                decoration: pw.BoxDecoration(
-                                    border: pw.Border.all(width: 1)
-                                ),
-                                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                child: pw.Row(
-                                    children: [
-                                      pw.Text('Date - '),
-                                      pw.Text(pod.formattedDate)
-                                    ]
-                                ),),
-                              pw.Container(
-                                  width: 140,
-                                  height: 40,
-                                  decoration: pw.BoxDecoration(
-                                      border: pw.Border.all(width: 1)
-                                  ),
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                                  child: pw.Row(
-                                      children: [
-                                        pw.Text('AWB no. - '),
-                                        pw.Text('${pod.podNumber}')
-                                      ]
-                                  ))
-                            ]
-                        )
-                    ),
-                    pw.Container(
-                        width: 140,
-                        height: 80,
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Weight',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
                         decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
+                          border: pw.Border.all(width: 1),
                         ),
-                        child: pw.Column(
-                            mainAxisAlignment: pw.MainAxisAlignment.center,
-                            children: [
-                              pw.Container(
-                                  width: 140,
-                                  height: 20,
-
-                                  decoration: pw.BoxDecoration(
-                                    border: pw.Border.all(width: 1),
-                                    color: PdfColor.fromInt(0xff2a3368),
-                                  ),
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-                                  child: pw.Text('Origin', style: pw.TextStyle(color: PdfColors.white))
-                              ),
-                              pw.Container(
-                                  width: 140,
-                                  height: 20,
-                                  decoration: pw.BoxDecoration(
-                                      border: pw.Border.all(width: 1)
-                                  ),
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-                                  child: pw.Text(pod.origin)
-                              ),
-                              pw.Container(
-                                  width: 140,
-                                  height: 20,
-                                  decoration: pw.BoxDecoration(
-                                    border: pw.Border.all(width: 1),
-                                    color: PdfColor.fromInt(0xff2a3368),
-                                  ),
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-                                  child: pw.Text('Destination',style: pw.TextStyle(color: PdfColors.white))
-                              ),
-                              pw.Container(
-                                  width: 140,
-                                  height: 20,
-                                  decoration: pw.BoxDecoration(
-                                      border: pw.Border.all(width: 1)
-                                  ),
-                                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 1),
-                                  child: pw.Text(pod.destination)
-                              ),
-                            ]
-                        )
-                    )
-                  ]
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text('${pod.weight} kg'),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Vol. Weight',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text('${pod.volWeight} kg'),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Pieces',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text('${pod.pieces}'),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Amount',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text('${pod.amount}'),
+                      ),
+                    ],
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(
+                          'Status',
+                          style: pw.TextStyle(
+                            color: PdfColors.white,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                      pw.Container(
+                        width: 93.33,
+                        height: 30,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text(pod.status),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               pw.Row(
-                  children: [
-                    pw.Container(
-                        width: 280,
-                        height: 60,
-                        decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('From'),
-                              pw.SizedBox(height: 5),
-                              pw.Text(pod.from, style: pw.TextStyle(fontSize: 15, color: PdfColor.fromInt(0xff2a3368)))
-                            ]
-                        )
+                children: [
+                  pw.Container(
+                    width: 280,
+                    height: 50,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
                     ),
-                    pw.Container(
-                        width: 280,
-                        height: 60,
-                        decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('To'),
-                              pw.SizedBox(height: 5),
-                              pw.Text(pod.to, style: pw.TextStyle(fontSize: 15, color: PdfColor.fromInt(0xff2a3368)))
-                            ]
-                        )
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Text(
+                      'I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF '
+                      'THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
+                      style: pw.TextStyle(
+                        fontSize: 7,
+                        lineSpacing: 2,
+                        wordSpacing: 1,
+                      ),
+                      textAlign: pw.TextAlign.justify,
                     ),
-                  ]
-              ),
-              pw.Row(
-                  children: [
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Contents', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text(pod.doc)
-                          ),
-                        ]),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Weight', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('${pod.weight} kg')
-                          ),
-                        ]),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Vol. Weight', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('${pod.volWeight} kg')
-                          ),
-                        ]),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Pieces', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('${pod.pieces}')
-                          ),
-                        ]),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Amount', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('${pod.amount}')
-                          ),
-                        ]),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Status', style: pw.TextStyle(color: PdfColors.white, fontSize: 10))
-                          ),
-                          pw.Container(
-                              width: 93.33,
-                              height: 30,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text(pod.status)
-                          ),
-                        ]),
-                  ]
-              ),
-              pw.Row(
-                  children: [
-                    pw.Container(
-                        width: 280,
-                        height: 50,
-                        decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF '
-                            'THE CENTRAL, STATE, OR LOCAL AUTHORITIES.', style: pw.TextStyle(fontSize: 7, lineSpacing: 2, wordSpacing: 1), textAlign: pw.TextAlign.justify)
-                    ),
-                    pw.Column(
-                        children: [
-                          pw.Container(
-                              width: 140,
-                              height: 25,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1),
-                                  color: PdfColor.fromInt(0xff2a3368)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Row(
-                                  children: [
-                                    pw.Text('Sender - ',style: pw.TextStyle(color: PdfColors.white)),
-                                    pw.Text(pod.sender,style: pw.TextStyle(color: PdfColors.white))
-                                  ])
-                          ),
-                          pw.Container(
-                              width: 140,
-                              height: 25,
-                              decoration: pw.BoxDecoration(
-                                  border: pw.Border.all(width: 1)
-                              ),
-                              padding: const pw.EdgeInsets.all(4),
-                              child: pw.Text('Sign - ')
-                          )
-                        ]),
-                    pw.Container(
+                  ),
+                  pw.Column(
+                    children: [
+                      pw.Container(
                         width: 140,
-                        height: 50,
+                        height: 25,
                         decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1)
+                          border: pw.Border.all(width: 1),
+                          color: PdfColor.fromInt(0xff2a3368),
                         ),
                         padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('Receiving Sign & Stamp', style: pw.TextStyle(fontSize: 10))
+                        child: pw.Row(
+                          children: [
+                            pw.Text(
+                              'Sender - ',
+                              style: pw.TextStyle(color: PdfColors.white),
+                            ),
+                            pw.Text(
+                              pod.sender,
+                              style: pw.TextStyle(color: PdfColors.white),
+                            ),
+                          ],
+                        ),
+                      ),
+                      pw.Container(
+                        width: 140,
+                        height: 25,
+                        decoration: pw.BoxDecoration(
+                          border: pw.Border.all(width: 1),
+                        ),
+                        padding: const pw.EdgeInsets.all(4),
+                        child: pw.Text('Sign - '),
+                      ),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 140,
+                    height: 50,
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(width: 1),
                     ),
-                  ]
-              )
+                    padding: const pw.EdgeInsets.all(4),
+                    child: pw.Text(
+                      'Receiving Sign & Stamp',
+                      style: pw.TextStyle(fontSize: 10),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          ],
+        ],
       ),
     );
   }
-  Future<Uint8List> _generatePdf(PdfPageFormat format, PodData pod, String address) async{
+
+  Future<Uint8List> _generatePdf(
+    PdfPageFormat format,
+    PodData pod,
+    String address,
+  ) async {
     final pdf = pw.Document();
     final imageBytes = await rootBundle.load('assets/images/logo1.png');
     final image = pw.MemoryImage(imageBytes.buffer.asUint8List());
@@ -560,19 +714,22 @@ class _add_dataState extends State<add_data> {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(10),
         build: (context) => pw.Column(
-          children: List.generate(3, (index) => pw.Column(
-            children: [
-              buildInvoice(pod, image, address),
-              if (index < 2) pw.Divider(), // Divider between copies (except after last one)
-            ],
-          )),
+          children: List.generate(
+            3,
+            (index) => pw.Column(
+              children: [
+                buildInvoice(pod, image, address),
+                if (index < 2)
+                  pw.Divider(), // Divider between copies (except after last one)
+              ],
+            ),
+          ),
         ),
       ),
     );
 
     return pdf.save();
   }
-
 
   Future<void> submitPodData() async {
     print("🟡 SUBMIT BUTTON PRESSED");
@@ -587,15 +744,14 @@ class _add_dataState extends State<add_data> {
     int? rate = int.tryParse(_rate.text.trim());
 
     if (weight == null || rate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Please enter valid Values")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("⚠️ Please enter valid Values")));
       return;
     }
 
     final int volWeight = int.tryParse(_volweight.text) ?? 0;
     _amount = (volWeight == 0 ? weight : volWeight) * rate;
-
 
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
@@ -605,8 +761,8 @@ class _add_dataState extends State<add_data> {
         _weight.text.trim().isEmpty ||
         _piece.text.trim().isEmpty ||
         selected_status.trim().isEmpty ||
-        selectedOption == null || selectedOption!.trim().isEmpty) {
-
+        selectedOption == null ||
+        selectedOption!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all required fields")),
       );
@@ -625,11 +781,13 @@ class _add_dataState extends State<add_data> {
         "origin": _origin,
         "destination": _destination,
         "weight": int.tryParse(_weight.text) ?? 0,
-        "vol_weight": _volweight.text.isEmpty ? null : int.tryParse(_volweight.text),
+        "vol_weight": _volweight.text.isEmpty
+            ? null
+            : int.tryParse(_volweight.text),
         "pieces": int.tryParse(_piece.text) ?? 0,
         "amount": int.tryParse(_amount.toString()) ?? 0,
         "status1": selected_status,
-        "sender": selectedOption
+        "sender": selectedOption,
       }),
     );
 
@@ -640,7 +798,9 @@ class _add_dataState extends State<add_data> {
       PodData pod = PodData(
         podNumber: data['podNumber'],
         date: data['date1'],
-        formattedDate: DateFormat('d-MM-yyyy').format(DateTime.parse(data['date1'])),
+        formattedDate: DateFormat(
+          'd-MM-yyyy',
+        ).format(DateTime.parse(data['date1'])),
         from: data['from1'],
         to: data['to1'],
         origin: data['origin'],
@@ -654,15 +814,17 @@ class _add_dataState extends State<add_data> {
         sender: data['sender'],
       );
 
-// ✅ Pass it to generate function
+      // ✅ Pass it to generate function
       setState(() {
         submittedPod = pod;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Data submitted successfully")));
-
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Data submitted successfully")));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to submit data")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Failed to submit data")));
       print("Status code: ${response.statusCode}");
       print("Response body: ${response.body}");
     }
@@ -673,11 +835,8 @@ class _add_dataState extends State<add_data> {
     return WatermarkedScaffold(
       appBar: AppBar(
         backgroundColor: Color(0xff2a3368),
-        title: Text('New Data', style: TextStyle(color: Colors.white),),
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
-
+        title: Text('New Data', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: sidebar(),
       body: Container(
@@ -688,36 +847,52 @@ class _add_dataState extends State<add_data> {
             scrollDirection: Axis.horizontal,
             child: Container(
               child: Column(
-
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      SizedBox(height: 30,),
+                      SizedBox(height: 30),
                       Row(
-                            children: [
-                              Text('   From :  ', style: TextStyle(fontSize: 20)),
-                              SizedBox(
-                                height: 45,
-                                width: 250,
-                                child: Autocomplete<String>(
-                              optionsBuilder: (TextEditingValue textEditingValue) {
-            if (textEditingValue.text == '') {
-            return const Iterable<String>.empty();
-            }
-            return nameSuggestions.where((option) => option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-            },
-              onSelected: (String selection) {
-                _from.text = selection;
-              },
-                                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                                    controller.text = _from.text; // ensure initial sync
+                        children: [
+                          Text('   From :  ', style: TextStyle(fontSize: 20)),
+                          SizedBox(
+                            height: 45,
+                            width: 250,
+                            child: Autocomplete<String>(
+                              optionsBuilder:
+                                  (TextEditingValue textEditingValue) {
+                                    if (textEditingValue.text == '') {
+                                      return const Iterable<String>.empty();
+                                    }
+                                    return nameSuggestions.where(
+                                      (option) => option.toLowerCase().contains(
+                                        textEditingValue.text.toLowerCase(),
+                                      ),
+                                    );
+                                  },
+                              onSelected: (String selection) {
+                                _from.text = selection;
+                              },
+                              fieldViewBuilder:
+                                  (
+                                    context,
+                                    controller,
+                                    focusNode,
+                                    onEditingComplete,
+                                  ) {
+                                    controller.text =
+                                        _from.text; // ensure initial sync
                                     controller.addListener(() {
-                                      _from.text = controller.text; // 🔁 keep it in sync on user typing
+                                      _from.text = controller
+                                          .text; // 🔁 keep it in sync on user typing
                                     });
                                     return TextField(
                                       controller: controller,
                                       focusNode: focusNode,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) {
+                                        FocusScope.of(context).requestFocus(_toFocus);
+                                      },
                                       onEditingComplete: onEditingComplete,
                                       decoration: InputDecoration(
                                         hintText: 'Name',
@@ -725,198 +900,316 @@ class _add_dataState extends State<add_data> {
                                       ),
                                     );
                                   },
-
-                                ),
-          )
-                            ],
-                          ), //From name
+                            ),
+                          ),
+                        ],
+                      ), //From name
                       SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   To      :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   To      :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           SizedBox(
-                              height: 45,
-                              width: 250,
+                            height: 45,
+                            width: 250,
                             child: Autocomplete<String>(
-                              optionsBuilder: (TextEditingValue textEditingValue) {
-                                if (textEditingValue.text == '') {
-                                  return const Iterable<String>.empty();
-                                }
-                                return nameSuggestions.where((option) => option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
-                              },
+                              optionsBuilder:
+                                  (TextEditingValue textEditingValue) {
+                                    if (textEditingValue.text == '') {
+                                      return const Iterable<String>.empty();
+                                    }
+                                    return nameSuggestions.where(
+                                      (option) => option.toLowerCase().contains(
+                                        textEditingValue.text.toLowerCase(),
+                                      ),
+                                    );
+                                  },
                               onSelected: (String selection) {
                                 _to.text = selection;
                               },
-                              fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                                controller.text = _to.text; // ensure initial sync
-                                controller.addListener(() {
-                                  _to.text = controller.text; // 🔁 keep it in sync on user typing
-                                });
-                                return TextField(
-                                  controller: controller,
-                                  focusNode: focusNode,
-                                  onEditingComplete: onEditingComplete,
-                                  decoration: InputDecoration(
-                                    hintText: 'Name',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                );
-                              },
-
+                              fieldViewBuilder:
+                                  (
+                                    context,
+                                    controller,
+                                    focusNode,
+                                    onEditingComplete,
+                                  ) {
+                                    controller.text =
+                                        _to.text; // ensure initial sync
+                                    controller.addListener(() {
+                                      _to.text = controller
+                                          .text; // 🔁 keep it in sync on user typing
+                                    });
+                                    return TextField(
+                                      controller: controller,
+                                      focusNode: _toFocus,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) {
+                                        FocusScope.of(context).requestFocus(_originFocus);
+                                      },
+                                      onEditingComplete: onEditingComplete,
+                                      decoration: InputDecoration(
+                                        hintText: 'Name',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                    );
+                                  },
                             ),
-                          )
+                          ),
                         ],
                       ), //To name
-                      SizedBox(height: 10,),
+                      SizedBox(height: 10),
                       Row(
                         children: [
                           Text('   Origin : ', style: TextStyle(fontSize: 20)),
                           SizedBox(
                             height: 50,
                             width: 250,
-                            child: DropdownButtonFormField<String>(
-                              decoration: InputDecoration(labelText: 'Origin', border: OutlineInputBorder()),
-                              value: _origin,
-                              items: locationOptions.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _origin = newValue;
-                                });
+                            child: Focus(
+                              focusNode: _originFocus,
+                              onKeyEvent: (node, event) {
+                                if (event.logicalKey == LogicalKeyboardKey.enter) {
+                                  FocusScope.of(context).requestFocus(_destinationFocus);
+                                  return KeyEventResult.handled;
+                                }
+                                return KeyEventResult.ignored;
                               },
+                              child: DropdownButtonFormField<String>(
+                                decoration: InputDecoration(
+                                  labelText: 'Origin',
+                                  border: OutlineInputBorder(),
+                                ),
+                                value: _origin,
+                                items: locationOptions.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _origin = newValue;
+                                  });
+                                },
+                              ),
                             ),
 
+
                           ),
-                          SizedBox(width: 20,)
+                          SizedBox(width: 20),
                         ],
-                      ),//Origin
-                      SizedBox(height: 10,),
-                      Row(
-                        children: [
-                          Text('   Destination : ', style: TextStyle(fontSize: 20)),
-                          SizedBox(
-                            height: 50,
-                            width: 200,
-                            child: DropdownButtonFormField<String>(
-                              decoration: InputDecoration(labelText: 'Destination', border: OutlineInputBorder()),
-                              value: _destination,
-                              items: locationOptions.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _destination = newValue;
-                                });
-                              },
-                            ),
-                          ),
-                          SizedBox(width: 20,)
-                        ],
-                      ),//Destination
+                      ), //Origin
                       SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('  Contents :', style: TextStyle(fontSize: 20),),
+                          Text(
+                            '   Destination : ',
+                            style: TextStyle(fontSize: 20),
+                          ),
+                          SizedBox(
+                            height: 50,
+                            width: 200,
+                            child: Focus(
+                              focusNode: _destinationFocus,
+                              onKeyEvent: (node, event) {
+                                if (event.logicalKey == LogicalKeyboardKey.enter) {
+                                  FocusScope.of(context).requestFocus(_weightFocus);
+                                  return KeyEventResult.handled;
+                                }
+                                return KeyEventResult.ignored;
+                              },
+                              child: DropdownButtonFormField<String>(
+                                decoration: InputDecoration(
+                                  labelText: 'Destination',
+                                  border: OutlineInputBorder(),
+                                ),
+                                value: _destination,
+                                items: locationOptions.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() {
+                                    _destination = newValue;
+                                  });
+                                },
+                              ),
+                            ),
+
+
+                          ),
+                          SizedBox(width: 20),
+                        ],
+                      ), //Destination
+                      SizedBox(height: 10),
+                      Row(
+                        children: [
+                          Text('  Contents :', style: TextStyle(fontSize: 20)),
                           Column(
                             children: [
                               SizedBox(
                                 height: 45,
                                 width: 125,
-                                child: ElevatedButton(onPressed: (){
-                                  setState(() {
-                                    selected_doc = 'Documents';
-                                  });
-                                },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: selected_doc == 'Documents' ? Color(0xff2a3368) : Colors.white,
-                                      foregroundColor: selected_doc == 'Documents' ? Colors.white : Color(0xff2a3368),
-                                    ),
-                                    child: Text('Documents')),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selected_doc = 'Documents';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: selected_doc == 'Documents'
+                                        ? Color(0xff2a3368)
+                                        : Colors.white,
+                                    foregroundColor: selected_doc == 'Documents'
+                                        ? Colors.white
+                                        : Color(0xff2a3368),
+                                  ),
+                                  child: Text('Documents'),
+                                ),
                               ),
-                              SizedBox(height: 10,),
+                              SizedBox(height: 10),
                               SizedBox(
                                 height: 45,
                                 width: 125,
-                                child: ElevatedButton(onPressed: (){
-                                  setState(() {
-                                    selected_doc = 'Non-Docx';
-                                  });
-                                },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: selected_doc == 'Non-Docx' ? Color(0xff2a3368) : Colors.white,
-                                      foregroundColor: selected_doc == 'Non-Docx' ? Colors.white : Color(0xff2a3368),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selected_doc = 'Non-Docx';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: selected_doc == 'Non-Docx'
+                                        ? Color(0xff2a3368)
+                                        : Colors.white,
+                                    foregroundColor: selected_doc == 'Non-Docx'
+                                        ? Colors.white
+                                        : Color(0xff2a3368),
+                                  ),
 
-                                    ),
-
-                                    child: Text('Non-Docx ')),
+                                  child: Text('Non-Docx '),
+                                ),
                               ),
                             ],
-                          )
+                          ),
                         ],
-                      ),//Document
-                      SizedBox(height: 10,),
+                      ), //Document
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   Weight   :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   Weight   :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           SizedBox(
-                              height: 45,
-                              width: 75,
-                              child: CommonTextField(hintText: 'kg', controller: _weight, keyboardType: TextInputType.number,))
+                            height: 45,
+                            width: 75,
+                            child: CommonTextField(
+                              hintText: 'kg',
+                              controller: _weight,
+                                keyboardType: TextInputType.number,
+                                focusNode: _weightFocus,
+                                nextFocus: _volWeightFocus,
+                            ),
+                          ),
                         ],
-                      ),//weight
-                      SizedBox(height: 10,),
+                      ), //weight
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   Vol. Wt   :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   Vol. Wt   :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           SizedBox(
-                              height: 45,
-                              width: 75,
-                              child: CommonTextField(hintText: 'kg', controller: _volweight, keyboardType: TextInputType.number,))
+                            height: 45,
+                            width: 75,
+                            child: CommonTextField(
+                              hintText: 'kg',
+                              controller: _volweight,
+                              focusNode: _volWeightFocus,
+                              nextFocus: _pieceFocus,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
                         ],
-                      ),//volumetric weight
-                      SizedBox(height: 10,),
+                      ), //volumetric weight
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   Pieces    :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   Pieces    :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           SizedBox(
-                              height: 45,
-                              width: 75,
-                              child: CommonTextField(hintText: 'pcs', controller: _piece, keyboardType: TextInputType.number,))
+                            height: 45,
+                            width: 75,
+                            child: CommonTextField(
+                              hintText: 'pcs',
+                              controller: _piece,
+                              focusNode: _pieceFocus,
+                              nextFocus: _rateFocus,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
                         ],
-                      ),//No. of pieces
-                      SizedBox(height: 10,),
+                      ), //No. of pieces
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   Rate        :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   Rate        :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
 
                           SizedBox(
-                              height: 45,
-                              width: 150,
-                              child: CommonTextField(hintText: '₹', controller: _rate, keyboardType: TextInputType.number,)),
-                          SizedBox(width: 100,),
+                            height: 45,
+                            width: 150,
+                            child: TextField(
+                              controller: _rate,
+                              keyboardType: TextInputType.number,
+                              textInputAction: TextInputAction.next,
+                              focusNode: _rateFocus,
+                              onSubmitted: (_) {
+                                FocusScope.of(context).requestFocus(
+                                  _senderFocus,
+                                ); // 🔥 move to dropdown
+                              },
+                              decoration: InputDecoration(
+                                hintText: '₹',
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                          ),
+
+                          SizedBox(width: 100),
                           SizedBox(
                             height: 45,
                             width: 120,
                             child: ElevatedButton(
                               onPressed: () {
                                 setState(() {
-                                  if (_weight.text.isEmpty || _rate.text.isEmpty) {
+                                  if (_weight.text.isEmpty ||
+                                      _rate.text.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text("Please enter both weight and rate")),
+                                      SnackBar(
+                                        content: Text(
+                                          "Please enter both weight and rate",
+                                        ),
+                                      ),
                                     );
                                     return;
                                   }
 
-                                  final int weight = int.tryParse(_weight.text) ?? 0;
-                                  final int volWeight = int.tryParse(_volweight.text) ?? 0;
-                                  final int rate = int.tryParse(_rate.text) ?? 0;
+                                  final int weight =
+                                      int.tryParse(_weight.text) ?? 0;
+                                  final int volWeight =
+                                      int.tryParse(_volweight.text) ?? 0;
+                                  final int rate =
+                                      int.tryParse(_rate.text) ?? 0;
 
                                   // Main logic
                                   if (volWeight == 0) {
@@ -931,70 +1224,95 @@ class _add_dataState extends State<add_data> {
                                 foregroundColor: Colors.white,
                               ),
                               child: Text('Amount'),
-                            )
-
+                            ),
                           ),
-                          SizedBox(width: 20,),
+                          SizedBox(width: 20),
                           Container(
-                              padding: EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.black, width: 1), // Border color and width
-                                borderRadius: BorderRadius.circular(4), // Optional: rounded corners
-                              ),
-                              child: Text('$_amount', style: TextStyle(fontSize: 18),)
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                color: Colors.black,
+                                width: 1,
+                              ), // Border color and width
+                              borderRadius: BorderRadius.circular(
+                                4,
+                              ), // Optional: rounded corners
+                            ),
+                            child: Text(
+                              '$_amount',
+                              style: TextStyle(fontSize: 18),
+                            ),
                           ),
-                          SizedBox(width: 50,)
+                          SizedBox(width: 50),
                         ],
-                      ),//Amount to be Paid
+                      ), //Amount to be Paid
                       SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('  Status      :  ', style: TextStyle(fontSize: 20),),
+                          Text(
+                            '  Status      :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           Row(
                             children: [
                               SizedBox(
                                 height: 45,
                                 width: 100,
-                                child: ElevatedButton(onPressed: (){
-                                  setState(() {
-                                    selected_status = 'Paid';
-                                  });
-                                },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: selected_status == 'Paid' ? Color(0xff2a3368) : Colors.white,
-                                      foregroundColor: selected_status == 'Paid' ? Colors.white : Color(0xff2a3368),
-                                    ),
-                                    child: Text('Paid')),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selected_status = 'Paid';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: selected_status == 'Paid'
+                                        ? Color(0xff2a3368)
+                                        : Colors.white,
+                                    foregroundColor: selected_status == 'Paid'
+                                        ? Colors.white
+                                        : Color(0xff2a3368),
+                                  ),
+                                  child: Text('Paid'),
+                                ),
                               ),
-                              SizedBox(width: 10,),
+                              SizedBox(width: 10),
                               SizedBox(
                                 height: 45,
                                 width: 100,
-                                child: ElevatedButton(onPressed: (){
-                                  setState(() {
-                                    selected_status = 'Unpaid';
-                                  });
-                                },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: selected_status == 'Unpaid' ? Color(0xff2a3368) : Colors.white,
-                                      foregroundColor: selected_status == 'Unpaid' ? Colors.white : Color(0xff2a3368),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      selected_status = 'Unpaid';
+                                    });
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: selected_status == 'Unpaid'
+                                        ? Color(0xff2a3368)
+                                        : Colors.white,
+                                    foregroundColor: selected_status == 'Unpaid'
+                                        ? Colors.white
+                                        : Color(0xff2a3368),
+                                  ),
 
-                                    ),
-
-                                    child: Text('Unpaid')),
+                                  child: Text('Unpaid'),
+                                ),
                               ),
                             ],
-                          )
+                          ),
                         ],
-                      ),//Payment Status
-                      SizedBox(height: 10,),
+                      ), //Payment Status
+                      SizedBox(height: 10),
                       Row(
                         children: [
-                          Text('   Sender  :  ', style: TextStyle(fontSize: 20)),
+                          Text(
+                            '   Sender  :  ',
+                            style: TextStyle(fontSize: 20),
+                          ),
                           SizedBox(
                             height: 50,
                             width: 225,
                             child: DropdownButtonFormField<String>(
+                              focusNode: _senderFocus,
                               decoration: InputDecoration(
                                 labelText: 'Select Sender',
                                 border: OutlineInputBorder(),
@@ -1010,20 +1328,48 @@ class _add_dataState extends State<add_data> {
                                 setState(() {
                                   selectedOption = newValue;
                                 });
+                                Future.delayed(Duration(milliseconds: 80), () {
+                                  FocusScope.of(context).requestFocus(_submitFocus);
+                                });
                               },
+
                             ),
                           ),
-                          SizedBox(width: 20,)
+                          SizedBox(width: 20),
                         ],
-                      ),//Sender
-                      SizedBox(height: 25,),
+                      ), //Sender
+                      SizedBox(height: 25),
                       Row(
                         children: [
-                          SizedBox(width: 100,),
+                          SizedBox(width: 100),
                           SizedBox(
                             height: 50,
                             width: 150,
-                            child: ElevatedButton(onPressed: submitPodData,
+                            child: ElevatedButton(
+                              focusNode: _submitFocus,
+                              onPressed: () async {
+                                bool confirm = await showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: Text("Are you sure?"),
+                                    content: Text("Do you want to submit this data?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, false),
+                                        child: Text("No"),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context, true),
+                                        child: Text("Yes"),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  submitPodData();
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.purple.shade900,
                                 foregroundColor: Colors.white,
@@ -1031,40 +1377,44 @@ class _add_dataState extends State<add_data> {
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                              child: Text('Submit',style: TextStyle(fontSize: 15),),),
+                              child: Text(
+                                'Submit',
+                                style: TextStyle(fontSize: 15),
+                              ),
+                            ),
                           ),
                         ],
-                      ),//submit
-                      SizedBox(height: 25,),
+                      ), //submit
+                      SizedBox(height: 25),
                       Row(
                         children: [
-                          SizedBox(width: 100,),
+                          SizedBox(width: 100),
                           SizedBox(
-                              height: 50,
-                              width: 150,
-                              child: ElevatedButton(onPressed: submittedPod == null
+                            height: 50,
+                            width: 150,
+                            child: ElevatedButton(
+                              onPressed: submittedPod == null
                                   ? null
-                                  : () => generateAndPreviewInvoice(context, submittedPod!),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.purple.shade900,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10),
+                                  : () => generateAndPreviewInvoice(
+                                      context,
+                                      submittedPod!,
                                     ),
-                                  ),
-                                  child: Text('Preview')
-                              )
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.purple.shade900,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: Text('Preview'),
+                            ),
                           ),
                         ],
-                      ),//Preview
-                      SizedBox(height: 25,),
-                        ],
-                  ),
-                  Column(
-                    children: [
-
+                      ), //Preview
+                      SizedBox(height: 25),
                     ],
-                  )
+                  ),
+                  Column(children: []),
                 ],
               ),
             ),
