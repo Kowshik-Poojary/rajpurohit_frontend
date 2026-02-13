@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey;
+import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey, KeyDownEvent;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
 import 'config/api.dart';
@@ -50,43 +50,26 @@ class CommonTextField extends StatelessWidget {
   final String hintText;
   final TextEditingController controller;
   final TextInputType keyboardType;
-  final TextInputAction textInputAction;
   final FocusNode focusNode;
-  final FocusNode? nextFocus;
 
   const CommonTextField({
     super.key,
     required this.hintText,
     required this.controller,
     required this.focusNode,
-    this.nextFocus,
     this.keyboardType = TextInputType.text,
-    this.textInputAction = TextInputAction.next,
   });
 
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
-      textInputAction: TextInputAction.next,
-      style: const TextStyle(color: Color(0xff2a3368)),
-      onSubmitted: (_) {
-        if (nextFocus != null) {
-          FocusScope.of(context).requestFocus(nextFocus);
-        }
-      },
+      textInputAction: TextInputAction.next, // 🔥 Let Flutter handle traversal
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: const TextStyle(color: Color(0xff2a3368)),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.black),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(
-            color: Colors.blueAccent,
-          ), // Border color when focused
-        ),
+        border: OutlineInputBorder(),
       ),
     );
   }
@@ -831,6 +814,21 @@ class _add_dataState extends State<add_data> {
   }
 
   @override
+  void dispose() {
+    _fromFocus.dispose();
+    _toFocus.dispose();
+    _originFocus.dispose();
+    _destinationFocus.dispose();
+    _weightFocus.dispose();
+    _volWeightFocus.dispose();
+    _pieceFocus.dispose();
+    _rateFocus.dispose();
+    _senderFocus.dispose();
+    _submitFocus.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return WatermarkedScaffold(
       appBar: AppBar(
@@ -839,588 +837,607 @@ class _add_dataState extends State<add_data> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: sidebar(),
-      body: Container(
-        width: double.infinity,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Center(
           child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            child: Container(
+            child: SizedBox(
+              width: 900,
               child: Column(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 30),
-                      Row(
-                        children: [
-                          Text('   From :  ', style: TextStyle(fontSize: 20)),
-                          SizedBox(
-                            height: 45,
-                            width: 250,
-                            child: Autocomplete<String>(
-                              optionsBuilder:
-                                  (TextEditingValue textEditingValue) {
-                                    if (textEditingValue.text == '') {
-                                      return const Iterable<String>.empty();
-                                    }
-                                    return nameSuggestions.where(
-                                      (option) => option.toLowerCase().contains(
-                                        textEditingValue.text.toLowerCase(),
-                                      ),
-                                    );
-                                  },
-                              onSelected: (String selection) {
-                                _from.text = selection;
-                              },
-                              fieldViewBuilder:
-                                  (
-                                    context,
-                                    controller,
-                                    focusNode,
-                                    onEditingComplete,
-                                  ) {
-                                    controller.text =
-                                        _from.text; // ensure initial sync
-                                    controller.addListener(() {
-                                      _from.text = controller
-                                          .text; // 🔁 keep it in sync on user typing
-                                    });
-                                    return TextField(
-                                      controller: controller,
-                                      focusNode: focusNode,
-                                      textInputAction: TextInputAction.next,
-                                      onSubmitted: (_) {
-                                        FocusScope.of(context).requestFocus(_toFocus);
-                                      },
-                                      onEditingComplete: onEditingComplete,
-                                      decoration: InputDecoration(
-                                        hintText: 'Name',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    );
-                                  },
-                            ),
-                          ),
-                        ],
-                      ), //From name
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   To      :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 250,
-                            child: Autocomplete<String>(
-                              optionsBuilder:
-                                  (TextEditingValue textEditingValue) {
-                                    if (textEditingValue.text == '') {
-                                      return const Iterable<String>.empty();
-                                    }
-                                    return nameSuggestions.where(
-                                      (option) => option.toLowerCase().contains(
-                                        textEditingValue.text.toLowerCase(),
-                                      ),
-                                    );
-                                  },
-                              onSelected: (String selection) {
-                                _to.text = selection;
-                              },
-                              fieldViewBuilder:
-                                  (
-                                    context,
-                                    controller,
-                                    focusNode,
-                                    onEditingComplete,
-                                  ) {
-                                    controller.text =
-                                        _to.text; // ensure initial sync
-                                    controller.addListener(() {
-                                      _to.text = controller
-                                          .text; // 🔁 keep it in sync on user typing
-                                    });
-                                    return TextField(
-                                      controller: controller,
-                                      focusNode: _toFocus,
-                                      textInputAction: TextInputAction.next,
-                                      onSubmitted: (_) {
-                                        FocusScope.of(context).requestFocus(_originFocus);
-                                      },
-                                      onEditingComplete: onEditingComplete,
-                                      decoration: InputDecoration(
-                                        hintText: 'Name',
-                                        border: OutlineInputBorder(),
-                                      ),
-                                    );
-                                  },
-                            ),
-                          ),
-                        ],
-                      ), //To name
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text('   Origin : ', style: TextStyle(fontSize: 20)),
-                          SizedBox(
-                            height: 50,
-                            width: 250,
-                            child: Focus(
-                              focusNode: _originFocus,
-                              onKeyEvent: (node, event) {
-                                if (event.logicalKey == LogicalKeyboardKey.enter) {
-                                  FocusScope.of(context).requestFocus(_destinationFocus);
-                                  return KeyEventResult.handled;
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  labelText: 'Origin',
-                                  border: OutlineInputBorder(),
-                                ),
-                                value: _origin,
-                                items: locationOptions.map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    _origin = newValue;
-                                  });
-                                },
-                              ),
-                            ),
-
-
-                          ),
-                          SizedBox(width: 20),
-                        ],
-                      ), //Origin
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Destination : ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 50,
-                            width: 200,
-                            child: Focus(
-                              focusNode: _destinationFocus,
-                              onKeyEvent: (node, event) {
-                                if (event.logicalKey == LogicalKeyboardKey.enter) {
-                                  FocusScope.of(context).requestFocus(_weightFocus);
-                                  return KeyEventResult.handled;
-                                }
-                                return KeyEventResult.ignored;
-                              },
-                              child: DropdownButtonFormField<String>(
-                                decoration: InputDecoration(
-                                  labelText: 'Destination',
-                                  border: OutlineInputBorder(),
-                                ),
-                                value: _destination,
-                                items: locationOptions.map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    _destination = newValue;
-                                  });
-                                },
-                              ),
-                            ),
-
-
-                          ),
-                          SizedBox(width: 20),
-                        ],
-                      ), //Destination
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text('  Contents :', style: TextStyle(fontSize: 20)),
-                          Column(
-                            children: [
-                              SizedBox(
-                                height: 45,
-                                width: 125,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      selected_doc = 'Documents';
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: selected_doc == 'Documents'
-                                        ? Color(0xff2a3368)
-                                        : Colors.white,
-                                    foregroundColor: selected_doc == 'Documents'
-                                        ? Colors.white
-                                        : Color(0xff2a3368),
-                                  ),
-                                  child: Text('Documents'),
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              SizedBox(
-                                height: 45,
-                                width: 125,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      selected_doc = 'Non-Docx';
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: selected_doc == 'Non-Docx'
-                                        ? Color(0xff2a3368)
-                                        : Colors.white,
-                                    foregroundColor: selected_doc == 'Non-Docx'
-                                        ? Colors.white
-                                        : Color(0xff2a3368),
-                                  ),
-
-                                  child: Text('Non-Docx '),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ), //Document
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Weight   :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 75,
-                            child: CommonTextField(
-                              hintText: 'kg',
-                              controller: _weight,
-                                keyboardType: TextInputType.number,
-                                focusNode: _weightFocus,
-                                nextFocus: _volWeightFocus,
-                            ),
-                          ),
-                        ],
-                      ), //weight
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Vol. Wt   :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 75,
-                            child: CommonTextField(
-                              hintText: 'kg',
-                              controller: _volweight,
-                              focusNode: _volWeightFocus,
-                              nextFocus: _pieceFocus,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ), //volumetric weight
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Pieces    :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 45,
-                            width: 75,
-                            child: CommonTextField(
-                              hintText: 'pcs',
-                              controller: _piece,
-                              focusNode: _pieceFocus,
-                              nextFocus: _rateFocus,
-                              keyboardType: TextInputType.number,
-                            ),
-                          ),
-                        ],
-                      ), //No. of pieces
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Rate        :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-
-                          SizedBox(
-                            height: 45,
-                            width: 150,
-                            child: TextField(
-                              controller: _rate,
-                              keyboardType: TextInputType.number,
-                              textInputAction: TextInputAction.next,
-                              focusNode: _rateFocus,
-                              onSubmitted: (_) {
-                                FocusScope.of(context).requestFocus(
-                                  _senderFocus,
-                                ); // 🔥 move to dropdown
-                              },
-                              decoration: InputDecoration(
-                                hintText: '₹',
-                                border: OutlineInputBorder(),
-                              ),
-                            ),
-                          ),
-
-                          SizedBox(width: 100),
-                          SizedBox(
-                            height: 45,
-                            width: 120,
-                            child: ElevatedButton(
-                              onPressed: () {
-                                setState(() {
-                                  if (_weight.text.isEmpty ||
-                                      _rate.text.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          "Please enter both weight and rate",
+                crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [Container(
+                    child: Column(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(height: 30),
+                            Row(
+                              children: [
+                                Text('   From :  ', style: TextStyle(fontSize: 20)),
+                                SizedBox(
+                                  height: 45,
+                                  width: 250,
+                                  child: Autocomplete<String>(
+                                    focusNode: _fromFocus,
+                                    textEditingController: _from,
+                                    optionsBuilder:
+                                        (TextEditingValue textEditingValue) {
+                                      if (textEditingValue.text == '') {
+                                        return const Iterable<String>.empty();
+                                      }
+                                      return nameSuggestions.where(
+                                            (option) => option.toLowerCase().contains(
+                                          textEditingValue.text.toLowerCase(),
                                         ),
-                                      ),
-                                    );
-                                    return;
-                                  }
-
-                                  final int weight =
-                                      int.tryParse(_weight.text) ?? 0;
-                                  final int volWeight =
-                                      int.tryParse(_volweight.text) ?? 0;
-                                  final int rate =
-                                      int.tryParse(_rate.text) ?? 0;
-
-                                  // Main logic
-                                  if (volWeight == 0) {
-                                    _amount = weight * rate;
-                                  } else {
-                                    _amount = volWeight * rate;
-                                  }
-                                });
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple.shade900,
-                                foregroundColor: Colors.white,
-                              ),
-                              child: Text('Amount'),
-                            ),
-                          ),
-                          SizedBox(width: 20),
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: Colors.black,
-                                width: 1,
-                              ), // Border color and width
-                              borderRadius: BorderRadius.circular(
-                                4,
-                              ), // Optional: rounded corners
-                            ),
-                            child: Text(
-                              '$_amount',
-                              style: TextStyle(fontSize: 18),
-                            ),
-                          ),
-                          SizedBox(width: 50),
-                        ],
-                      ), //Amount to be Paid
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '  Status      :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          Row(
-                            children: [
-                              SizedBox(
-                                height: 45,
-                                width: 100,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      selected_status = 'Paid';
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: selected_status == 'Paid'
-                                        ? Color(0xff2a3368)
-                                        : Colors.white,
-                                    foregroundColor: selected_status == 'Paid'
-                                        ? Colors.white
-                                        : Color(0xff2a3368),
+                                      );
+                                    },
+                                    onSelected: (String selection) {
+                                      _from.text = selection;
+                                    },
+                                    fieldViewBuilder:
+                                        (
+                                        context,
+                                        controller,
+                                        focusNode,
+                                        onEditingComplete,
+                                        ) {
+                                      controller.text =
+                                          _from.text; // ensure initial sync
+                                      controller.addListener(() {
+                                        _from.text = controller
+                                            .text; // 🔁 keep it in sync on user typing
+                                      });
+                                      return TextField(
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        textInputAction: TextInputAction.next,
+                                        onSubmitted: (_) {
+                                          FocusScope.of(context).requestFocus(_toFocus);
+                                        },
+                                        onEditingComplete: onEditingComplete,
+                                        decoration: InputDecoration(
+                                          hintText: 'Name',
+                                          border: OutlineInputBorder(),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                  child: Text('Paid'),
                                 ),
-                              ),
-                              SizedBox(width: 10),
-                              SizedBox(
-                                height: 45,
-                                width: 100,
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      selected_status = 'Unpaid';
-                                    });
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: selected_status == 'Unpaid'
-                                        ? Color(0xff2a3368)
-                                        : Colors.white,
-                                    foregroundColor: selected_status == 'Unpaid'
-                                        ? Colors.white
-                                        : Color(0xff2a3368),
+                              ],
+                            ), //From name
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   To      :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 45,
+                                  width: 250,
+                                  child: Autocomplete<String>(
+                                    focusNode: _toFocus,
+                                    textEditingController: _to,
+                                    optionsBuilder: (TextEditingValue textEditingValue) {
+                                      if (textEditingValue.text == '') {
+                                        return const Iterable<String>.empty();
+                                      }
+                                      return nameSuggestions.where(
+                                            (option) => option.toLowerCase().contains(
+                                          textEditingValue.text.toLowerCase(),
+                                        ),
+                                      );
+                                    },
+                                    onSelected: (String selection) {
+                                      _to.text = selection;
+                                      FocusScope.of(context).requestFocus(_originFocus);
+                                    },
+                                    fieldViewBuilder: (
+                                        context,
+                                        controller,
+                                        focusNode,
+                                        onEditingComplete,
+                                        ) {
+                                      controller.text = _to.text;
+
+                                      return TextField(
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        textInputAction: TextInputAction.next,
+                                        onSubmitted: (_) {
+                                          FocusScope.of(context).requestFocus(_originFocus);
+                                        },
+                                        decoration: InputDecoration(
+                                          hintText: 'Name',
+                                          border: OutlineInputBorder(),
+                                        ),
+                                      );
+                                    },
                                   ),
-
-                                  child: Text('Unpaid'),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ), //Payment Status
-                      SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            '   Sender  :  ',
-                            style: TextStyle(fontSize: 20),
-                          ),
-                          SizedBox(
-                            height: 50,
-                            width: 225,
-                            child: DropdownButtonFormField<String>(
-                              focusNode: _senderFocus,
-                              decoration: InputDecoration(
-                                labelText: 'Select Sender',
-                                border: OutlineInputBorder(),
-                              ),
-                              value: selectedOption,
-                              items: senderOptions.map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  selectedOption = newValue;
-                                });
-                                Future.delayed(Duration(milliseconds: 80), () {
-                                  FocusScope.of(context).requestFocus(_submitFocus);
-                                });
-                              },
 
-                            ),
-                          ),
-                          SizedBox(width: 20),
-                        ],
-                      ), //Sender
-                      SizedBox(height: 25),
-                      Row(
-                        children: [
-                          SizedBox(width: 100),
-                          SizedBox(
-                            height: 50,
-                            width: 150,
-                            child: ElevatedButton(
-                              focusNode: _submitFocus,
-                              onPressed: () async {
-                                bool confirm = await showDialog(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: Text("Are you sure?"),
-                                    content: Text("Do you want to submit this data?"),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, false),
-                                        child: Text("No"),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.pop(context, true),
-                                        child: Text("Yes"),
-                                      ),
-                                    ],
+                              ],
+                            ), //To name
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text('   Origin : ', style: TextStyle(fontSize: 20)),
+                                SizedBox(
+                                  height: 55,
+                                  width: 250,
+                                  child: DropdownButtonFormField<String>(
+                                    focusNode: _originFocus,
+                                    isExpanded: true,  // ✅ VERY IMPORTANT
+                                    decoration: InputDecoration(
+                                      labelText: 'Origin',
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                    ),
+                                    value: _origin,
+                                    items: locationOptions.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        _origin = newValue;
+                                      });
+
+                                      // 🔥 MOVE FOCUS AFTER SELECTION
+                                      Future.delayed(Duration(milliseconds: 100), () {
+                                        FocusScope.of(context).requestFocus(_destinationFocus);
+                                      });
+                                    },
                                   ),
-                                );
-
-                                if (confirm == true) {
-                                  submitPodData();
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple.shade900,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              ),
-                              child: Text(
-                                'Submit',
-                                style: TextStyle(fontSize: 15),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ), //submit
-                      SizedBox(height: 25),
-                      Row(
-                        children: [
-                          SizedBox(width: 100),
-                          SizedBox(
-                            height: 50,
-                            width: 150,
-                            child: ElevatedButton(
-                              onPressed: submittedPod == null
-                                  ? null
-                                  : () => generateAndPreviewInvoice(
+
+                                SizedBox(width: 20),
+                              ],
+                            ), //Origin
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Destination : ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 55,
+                                  width: 250,
+                                  child: DropdownButtonFormField<String>(
+                                    focusNode: _destinationFocus,
+                                    isExpanded: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Destination',
+                                      border: OutlineInputBorder(),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                                    ),
+                                    value: _destination,
+                                    items: locationOptions.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        _destination = newValue;
+                                      });
+
+                                      Future.delayed(Duration(milliseconds: 100), () {
+                                        FocusScope.of(context).requestFocus(_weightFocus);
+                                      });
+                                    },
+                                  ),
+                                ),
+
+                                SizedBox(width: 20),
+                              ],
+                            ), //Destination
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text('  Contents :', style: TextStyle(fontSize: 20)),
+                                Column(
+                                  children: [
+                                    SizedBox(
+                                      height: 45,
+                                      width: 125,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            selected_doc = 'Documents';
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: selected_doc == 'Documents'
+                                              ? Color(0xff2a3368)
+                                              : Colors.white,
+                                          foregroundColor: selected_doc == 'Documents'
+                                              ? Colors.white
+                                              : Color(0xff2a3368),
+                                        ),
+                                        child: Text('Documents'),
+                                      ),
+                                    ),
+                                    SizedBox(height: 10),
+                                    SizedBox(
+                                      height: 45,
+                                      width: 125,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            selected_doc = 'Non-Docx';
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: selected_doc == 'Non-Docx'
+                                              ? Color(0xff2a3368)
+                                              : Colors.white,
+                                          foregroundColor: selected_doc == 'Non-Docx'
+                                              ? Colors.white
+                                              : Color(0xff2a3368),
+                                        ),
+
+                                        child: Text('Non-Docx '),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ), //Document
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Weight   :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 45,
+                                  width: 75,
+                                  child: CommonTextField(
+                                    hintText: 'kg',
+                                    controller: _weight,
+                                    keyboardType: TextInputType.number,
+                                    focusNode: _weightFocus,
+                                  ),
+                                ),
+                              ],
+                            ), //weight
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Vol. Wt   :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 45,
+                                  width: 75,
+                                  child: CommonTextField(
+                                    hintText: 'kg',
+                                    controller: _volweight,
+                                    focusNode: _volWeightFocus,
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ), //volumetric weight
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Pieces    :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 45,
+                                  width: 75,
+                                  child: CommonTextField(
+                                    hintText: 'pcs',
+                                    controller: _piece,
+                                    focusNode: _pieceFocus,
+                                    keyboardType: TextInputType.number,
+                                  ),
+                                ),
+                              ],
+                            ), //No. of pieces
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Rate        :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+
+                                SizedBox(
+                                  height: 45,
+                                  width: 150,
+                                  child: TextField(
+                                    controller: _rate,
+                                    keyboardType: TextInputType.number,
+                                    textInputAction: TextInputAction.next,
+                                    focusNode: _rateFocus,
+                                    onSubmitted: (_) {
+                                      FocusScope.of(context).requestFocus(_senderFocus);
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText: '₹',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ),
+
+                                SizedBox(width: 100),
+                                SizedBox(
+                                  height: 45,
+                                  width: 120,
+                                  child: ElevatedButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        if (_weight.text.isEmpty ||
+                                            _rate.text.isEmpty) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                "Please enter both weight and rate",
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
+                                        final int weight =
+                                            int.tryParse(_weight.text) ?? 0;
+                                        final int volWeight =
+                                            int.tryParse(_volweight.text) ?? 0;
+                                        final int rate =
+                                            int.tryParse(_rate.text) ?? 0;
+
+                                        // Main logic
+                                        if (volWeight == 0) {
+                                          _amount = weight * rate;
+                                        } else {
+                                          _amount = volWeight * rate;
+                                        }
+                                      });
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.purple.shade900,
+                                      foregroundColor: Colors.white,
+                                    ),
+                                    child: Text('Amount'),
+                                  ),
+                                ),
+                                SizedBox(width: 20),
+                                Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: Colors.black,
+                                      width: 1,
+                                    ), // Border color and width
+                                    borderRadius: BorderRadius.circular(
+                                      4,
+                                    ), // Optional: rounded corners
+                                  ),
+                                  child: Text(
+                                    '$_amount',
+                                    style: TextStyle(fontSize: 18),
+                                  ),
+                                ),
+                                SizedBox(width: 50),
+                              ],
+                            ), //Amount to be Paid
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '  Status      :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                Row(
+                                  children: [
+                                    SizedBox(
+                                      height: 45,
+                                      width: 100,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            selected_status = 'Paid';
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: selected_status == 'Paid'
+                                              ? Color(0xff2a3368)
+                                              : Colors.white,
+                                          foregroundColor: selected_status == 'Paid'
+                                              ? Colors.white
+                                              : Color(0xff2a3368),
+                                        ),
+                                        child: Text('Paid'),
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    SizedBox(
+                                      height: 45,
+                                      width: 100,
+                                      child: ElevatedButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            selected_status = 'Unpaid';
+                                          });
+                                        },
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: selected_status == 'Unpaid'
+                                              ? Color(0xff2a3368)
+                                              : Colors.white,
+                                          foregroundColor: selected_status == 'Unpaid'
+                                              ? Colors.white
+                                              : Color(0xff2a3368),
+                                        ),
+
+                                        child: Text('Unpaid'),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ), //Payment Status
+                            SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Text(
+                                  '   Sender  :  ',
+                                  style: TextStyle(fontSize: 20),
+                                ),
+                                SizedBox(
+                                  height: 50,
+                                  width: 225,
+                                  child: DropdownButtonFormField<String>(
+                                    focusNode: _senderFocus,
+                                    decoration: InputDecoration(
+                                      labelText: 'Select Sender',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                    value: selectedOption,
+                                    items: senderOptions.map((String value) {
+                                      return DropdownMenuItem<String>(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        selectedOption = newValue;
+                                      });
+
+                                      // 🔥 MOVE TO SUBMIT AFTER SELECTION
+                                      Future.delayed(Duration(milliseconds: 100), () {
+                                        FocusScope.of(context).requestFocus(_submitFocus);
+                                      });
+                                    },
+                                  ),
+                                ),
+
+                                SizedBox(width: 20),
+                              ],
+                            ), //Sender
+                            SizedBox(height: 25),
+                            Row(
+                              children: [
+                                SizedBox(width: 100),
+                                SizedBox(
+                                  height: 50,
+                                  width: 150,
+                                  child: ElevatedButton(
+                                    focusNode: _submitFocus,
+                                    onPressed: () async {
+                                      bool? confirm = await showDialog<bool>(
+                                        context: context,
+                                        builder: (context) {
+                                          return Shortcuts(
+                                            shortcuts: {
+                                              LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+                                              LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
+                                            },
+                                            child: Actions(
+                                              actions: {
+                                                ActivateIntent: CallbackAction<ActivateIntent>(
+                                                  onInvoke: (intent) {
+                                                    Navigator.of(context).pop(true);
+                                                    return null;
+                                                  },
+                                                ),
+                                                DismissIntent: CallbackAction<DismissIntent>(
+                                                  onInvoke: (intent) {
+                                                    Navigator.of(context).pop(false);
+                                                    return null;
+                                                  },
+                                                ),
+                                              },
+                                              child: Focus(
+                                                autofocus: true,
+                                                child: AlertDialog(
+                                                  title: const Text("Are you sure?"),
+                                                  content: const Text("Do you want to submit this data?"),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () => Navigator.pop(context, false),
+                                                      child: const Text("No"),
+                                                    ),
+                                                    ElevatedButton(
+                                                      onPressed: () => Navigator.pop(context, true),
+                                                      child: const Text("Yes"),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+
+                                      if (confirm ?? false) {
+                                        submitPodData();
+                                      }
+
+
+
+                                      if (confirm ?? false) {
+                                        submitPodData();
+                                      }
+                                    },
+                                    child: Text('Submit'),
+                                  ),
+                                ),
+
+                              ],
+                            ), //submit
+                            SizedBox(height: 25),
+                            Row(
+                              children: [
+                                SizedBox(width: 100),
+                                SizedBox(
+                                  height: 50,
+                                  width: 150,
+                                  child: ElevatedButton(
+                                    onPressed: submittedPod == null
+                                        ? null
+                                        : () => generateAndPreviewInvoice(
                                       context,
                                       submittedPod!,
                                     ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.purple.shade900,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.purple.shade900,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: Text('Preview'),
+                                  ),
                                 ),
-                              ),
-                              child: Text('Preview'),
-                            ),
-                          ),
-                        ],
-                      ), //Preview
-                      SizedBox(height: 25),
-                    ],
-                  ),
-                  Column(children: []),
-                ],
+                              ],
+                            ), //Preview
+                            SizedBox(height: 25),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),]
               ),
             ),
           ),
         ),
       ),
+
+
     );
   }
 }

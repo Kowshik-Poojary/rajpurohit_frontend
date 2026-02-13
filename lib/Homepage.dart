@@ -16,10 +16,11 @@ class OrderStats {
 
   factory OrderStats.fromJson(Map<String, dynamic> json) {
     return OrderStats(
-      date: json['day'],
-      orders: json['total_orders'],
+      date: json['day']?.toString() ?? '',
+      orders: int.tryParse(json['total_orders']?.toString() ?? '0') ?? 0,
     );
   }
+
 }
 
 class PaidUnpaidStats {
@@ -31,11 +32,12 @@ class PaidUnpaidStats {
 
   factory PaidUnpaidStats.fromJson(Map<String, dynamic> json) {
     return PaidUnpaidStats(
-      date: json['day'],
-      paid: json['paid'],
-      unpaid: json['unpaid'],
+      date: json['day']?.toString() ?? '',
+      paid: int.tryParse(json['paid']?.toString() ?? '0') ?? 0,
+      unpaid: int.tryParse(json['unpaid']?.toString() ?? '0') ?? 0,
     );
   }
+
 }
 
 class homepage extends StatefulWidget {
@@ -121,8 +123,21 @@ class _homepageState extends State<homepage> {
               getTitlesWidget: (value, meta) {
                 int index = value.toInt();
                 if (index < 0 || index >= paidUnpaidList.length) return SizedBox();
-                final date = DateTime.parse(paidUnpaidList[index].date);
+                if (paidUnpaidList[index].date.isEmpty) return SizedBox();
+                String rawDate = paidUnpaidList[index].date;
+
+                if (rawDate.isEmpty) return SizedBox();
+
+                DateTime? date;
+
+                try {
+                  date = DateTime.parse(rawDate);
+                } catch (_) {
+                  return Text(rawDate, style: TextStyle(fontSize: 10));
+                }
+
                 return Text("${date.day}/${date.month}", style: TextStyle(fontSize: 10));
+
               },
             ),
           ),
@@ -228,8 +243,26 @@ class _homepageState extends State<homepage> {
                   getTitlesWidget: (value, meta) {
                     int index = value.toInt();
                     if (index < 0 || index >= weeklyStats.length) return SizedBox();
-                    final date = DateTime.parse(weeklyStats[index].date);
+                    String rawDate = weeklyStats[index].date;
+
+                    if (rawDate.isEmpty) return SizedBox();
+
+                    DateTime? date;
+
+                    try {
+                      date = DateTime.parse(rawDate);
+                    } catch (_) {
+                      // If backend sends already formatted date like 13-02-2026
+                      return Text(rawDate, style: TextStyle(fontSize: 10));
+                    }
+
                     final label = "${date.day}/${date.month}";
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 4.0),
+                      child: Text(label, style: TextStyle(fontSize: 10)),
+                    );
+
                     return Padding(
                       padding: const EdgeInsets.only(top: 4.0),
                       child: Text(label, style: TextStyle(fontSize: 10)),
