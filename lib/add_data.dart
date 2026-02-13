@@ -862,48 +862,46 @@ class _add_dataState extends State<add_data> {
                                   child: Autocomplete<String>(
                                     focusNode: _fromFocus,
                                     textEditingController: _from,
-                                    optionsBuilder:
-                                        (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text == '') {
+                                    optionsBuilder: (TextEditingValue textEditingValue) {
+                                      if (textEditingValue.text.isEmpty) {
                                         return const Iterable<String>.empty();
                                       }
                                       return nameSuggestions.where(
-                                            (option) => option.toLowerCase().contains(
-                                          textEditingValue.text.toLowerCase(),
-                                        ),
+                                            (option) => option
+                                            .toLowerCase()
+                                            .contains(textEditingValue.text.toLowerCase()),
                                       );
                                     },
                                     onSelected: (String selection) {
-                                      _from.text = selection;
+                                      _from.text = selection;   // store final value here
+                                      FocusScope.of(context).requestFocus(_toFocus);
                                     },
-                                    fieldViewBuilder:
-                                        (
+                                    fieldViewBuilder: (
                                         context,
                                         controller,
                                         focusNode,
                                         onEditingComplete,
                                         ) {
-                                      controller.text =
-                                          _from.text; // ensure initial sync
-                                      controller.addListener(() {
-                                        _from.text = controller
-                                            .text; // 🔁 keep it in sync on user typing
-                                      });
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
-                                        textInputAction: TextInputAction.next,
-                                        onSubmitted: (_) {
+                                        textInputAction: TextInputAction.done, // 🔥 important
+                                        onSubmitted: (value) {
+                                          // 🔥 If user presses Enter without selecting
+                                          if (nameSuggestions.contains(value)) {
+                                            _from.text = value;
+                                          }
                                           FocusScope.of(context).requestFocus(_toFocus);
                                         },
-                                        onEditingComplete: onEditingComplete,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           hintText: 'Name',
                                           border: OutlineInputBorder(),
                                         ),
                                       );
                                     },
+
                                   ),
+
                                 ),
                               ],
                             ), //From name
@@ -921,13 +919,13 @@ class _add_dataState extends State<add_data> {
                                     focusNode: _toFocus,
                                     textEditingController: _to,
                                     optionsBuilder: (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text == '') {
+                                      if (textEditingValue.text.isEmpty) {
                                         return const Iterable<String>.empty();
                                       }
                                       return nameSuggestions.where(
-                                            (option) => option.toLowerCase().contains(
-                                          textEditingValue.text.toLowerCase(),
-                                        ),
+                                            (option) => option
+                                            .toLowerCase()
+                                            .contains(textEditingValue.text.toLowerCase()),
                                       );
                                     },
                                     onSelected: (String selection) {
@@ -940,23 +938,30 @@ class _add_dataState extends State<add_data> {
                                         focusNode,
                                         onEditingComplete,
                                         ) {
-                                      controller.text = _to.text;
-
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
-                                        textInputAction: TextInputAction.next,
-                                        onSubmitted: (_) {
+                                        textInputAction: TextInputAction.done,
+                                        onSubmitted: (value) {
+                                          if (nameSuggestions.contains(value)) {
+                                            _to.text = value;
+                                          }
                                           FocusScope.of(context).requestFocus(_originFocus);
                                         },
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           hintText: 'Name',
                                           border: OutlineInputBorder(),
                                         ),
                                       );
                                     },
+
                                   ),
+
+
+
+
                                 ),
+
 
                               ],
                             ), //To name
@@ -1387,11 +1392,6 @@ class _add_dataState extends State<add_data> {
                                         submitPodData();
                                       }
 
-
-
-                                      if (confirm ?? false) {
-                                        submitPodData();
-                                      }
                                     },
                                     child: Text('Submit'),
                                   ),
