@@ -3,6 +3,8 @@ import 'package:rajpurohit/add_data.dart';
 import 'package:rajpurohit/main.dart';
 import 'package:rajpurohit/previous_data.dart';
 import 'package:rajpurohit/settings.dart';
+import 'package:rajpurohit/manual_pod_entry.dart';
+import 'package:rajpurohit/PreviousManualPodData.dart';
 
 import 'Homepage.dart';
 class sidebar extends StatefulWidget {
@@ -139,9 +141,23 @@ class _sidebarState extends State<sidebar> {
           ),
           ListTile(
             leading: Icon(Icons.preview),
-            title: Text('Previous Data'),
+            title: Text('Previous New Data'),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context)=> previous_data()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.add_chart),
+            title: Text('Manual Data Entry'),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context)=> manual_pod_entry()));
+            },
+          ),
+          ListTile(
+            leading: Icon(Icons.preview),
+            title: Text('Manual Data'),
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (context)=> PreviousManualPodData()));
             },
           ),
           ListTile(

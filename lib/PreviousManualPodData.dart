@@ -3,27 +3,25 @@ import 'package:intl/intl.dart';
 import 'package:rajpurohit/sidebar.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'EditVolWeightPage.dart';
 import 'config/api.dart';
 import 'pod_data.dart';
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
-import 'package:excel/excel.dart';
 import 'package:open_file/open_file.dart';
 import 'edit_payment_status.dart';
+import 'EditVolWeightPage.dart';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
-
-class previous_data extends StatefulWidget {
-  const previous_data({super.key});
+class PreviousManualPodData extends StatefulWidget {
+  const PreviousManualPodData({super.key});
 
   @override
-  State<previous_data> createState() => _previous_dataState();
+  State<PreviousManualPodData> createState() => _PreviousManualPodDataState();
 }
 
-class _previous_dataState extends State<previous_data> {
+class _PreviousManualPodDataState extends State<PreviousManualPodData> {
   List<PodData> podList = [];
   bool isLoading = true;
   List<PodData> filteredList = [];
@@ -40,42 +38,59 @@ class _previous_dataState extends State<previous_data> {
   @override
   void initState() {
     super.initState();
-    fetchPods();
+    fetchManualPods();
   }
 
   @override
   void dispose() {
     _verticalScrollController.dispose();
+    originController.dispose();
+    destinationController.dispose();
+    fromController.dispose();
+    toController.dispose();
+    idController.dispose();
     super.dispose();
   }
 
+  Future<void> fetchManualPods() async {
+    final url = Uri.parse("${ApiConfig.baseUrl}/get-manual-pods");
+    try {
+      final response = await http.get(url);
 
-  Future<void> fetchPods() async {
-    final url = Uri.parse("${ApiConfig.baseUrl}/get-all-pods"); // ✅ update IP as needed
-    final response = await http.get(url);
-
-    if (response.statusCode == 200) {
-      final List<dynamic> jsonData = json.decode(response.body);
-      setState(() {
-        podList = jsonData.map((json) => PodData.fromJson(json)).toList();
-        isLoading = false;
-      });
-      filterTable();
-    } else {
-      print("Failed to load data");
+      if (response.statusCode == 200) {
+        final List<dynamic> jsonData = json.decode(response.body);
+        setState(() {
+          podList = jsonData.map((json) => PodData.fromJson(json)).toList();
+          isLoading = false;
+        });
+        filterTable();
+      } else {
+        print("Failed to load manual pods");
+        setState(() => isLoading = false);
+        _showErrorSnackbar("Failed to load manual POD data");
+      }
+    } catch (e) {
+      print("Error: $e");
       setState(() => isLoading = false);
+      _showErrorSnackbar("Error loading data: $e");
     }
   }
 
   void filterTable() {
     setState(() {
       filteredList = podList.where((pod) {
-        bool matchesOrigin = originController.text.isEmpty || pod.origin.toLowerCase().contains(originController.text.toLowerCase());
-        bool matchesDestination = destinationController.text.isEmpty || pod.destination.toLowerCase().contains(destinationController.text.toLowerCase());
-        bool matchesFrom = fromController.text.isEmpty || pod.from.toLowerCase().contains(fromController.text.toLowerCase());
-        bool matchesTo = toController.text.isEmpty || pod.to.toLowerCase().contains(toController.text.toLowerCase());
-        bool matchesID = idController.text.isEmpty || pod.podNumber.toString().contains(idController.text);
-        bool matchesStatus = selectedStatus == null || selectedStatus == 'All' || pod.status == selectedStatus;
+        bool matchesOrigin = originController.text.isEmpty ||
+            pod.origin.toLowerCase().contains(originController.text.toLowerCase());
+        bool matchesDestination = destinationController.text.isEmpty ||
+            pod.destination.toLowerCase().contains(destinationController.text.toLowerCase());
+        bool matchesFrom = fromController.text.isEmpty ||
+            pod.from.toLowerCase().contains(fromController.text.toLowerCase());
+        bool matchesTo = toController.text.isEmpty ||
+            pod.to.toLowerCase().contains(toController.text.toLowerCase());
+        bool matchesID = idController.text.isEmpty ||
+            pod.podNumber.toString().contains(idController.text);
+        bool matchesStatus =
+            selectedStatus == null || selectedStatus == 'All' || pod.status == selectedStatus;
 
         bool matchesDate = true;
         if (startDate != null && endDate != null && pod.formattedDate.isNotEmpty) {
@@ -88,11 +103,16 @@ class _previous_dataState extends State<previous_data> {
           }
         }
 
-        return matchesOrigin && matchesDestination && matchesFrom && matchesTo && matchesID && matchesStatus && matchesDate;
+        return matchesOrigin &&
+            matchesDestination &&
+            matchesFrom &&
+            matchesTo &&
+            matchesID &&
+            matchesStatus &&
+            matchesDate;
       }).toList();
     });
   }
-
 
   Future<void> pickDateRange(BuildContext context) async {
     final picked = await showDateRangePicker(
@@ -115,14 +135,26 @@ class _previous_dataState extends State<previous_data> {
       filterTable();
     }
   }
+
   Future<void> exportFilteredToExcel() async {
     var excel = Excel.createExcel();
-    Sheet sheet = excel['Filtered POD'];
+    Sheet sheet = excel['Manual POD Data'];
 
     // Add header
     sheet.appendRow([
-      'POD No.', 'Date', 'From', 'To', 'Origin', 'Destination',
-      'Doc', 'Weight', 'Vol Weight', 'Pieces', 'Amount', 'Status', 'Sender'
+      'POD No.',
+      'Date',
+      'From',
+      'To',
+      'Origin',
+      'Destination',
+      'Doc',
+      'Weight',
+      'Vol Weight',
+      'Pieces',
+      'Amount',
+      'Status',
+      'Sender'
     ]);
 
     // Add data
@@ -146,7 +178,7 @@ class _previous_dataState extends State<previous_data> {
 
     // Save to application directory
     final directory = await getApplicationDocumentsDirectory();
-    final path = '${directory.path}/filtered_pod_data.xlsx';
+    final path = '${directory.path}/manual_pod_data.xlsx';
     final file = File(path);
     await file.writeAsBytes(excel.encode()!);
 
@@ -154,34 +186,39 @@ class _previous_dataState extends State<previous_data> {
     final result = await OpenFile.open(path);
 
     if (result.type != ResultType.done) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to open file. Please install Excel app.')),
-      );
+      _showErrorSnackbar('Failed to open file. Please install Excel app.');
+    } else {
+      _showSuccessSnackbar('Exported successfully!');
     }
   }
+
   Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
       if (await Permission.storage.isGranted) return true;
 
-      // Android 13+ (API 33 and above)
-      if (Platform.version.contains('13') || Platform.version.contains('14')) {
-        var audio = await Permission.audio.request();
-        var video = await Permission.videos.request();
-        var images = await Permission.photos.request();
-
-        return audio.isGranted || video.isGranted || images.isGranted;
-      }
-
-      // For older Android versions
       var storage = await Permission.storage.request();
       return storage.isGranted;
     }
     return true;
   }
 
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+      ),
+    );
+  }
 
-
-
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
 
   Widget buildTable() {
     return SingleChildScrollView(
@@ -230,17 +267,15 @@ class _previous_dataState extends State<previous_data> {
                           builder: (_) => EditVolWeightPage(
                             podId: pod.podNumber,
                             currentVolWeight: pod.volWeight,
-                            weight: int.parse(pod.weight), // ⬅️ pass original weight
+                            weight: int.parse(pod.weight),
                           ),
                         ),
-                      ).then((_) => fetchPods());
-                      // Refresh after update
+                      ).then((_) => fetchManualPods());
                     },
                   ),
                 ],
               ),
             ),
-
             DataCell(Text(pod.pieces)),
             DataCell(Text(pod.amount)),
             DataCell(
@@ -259,13 +294,12 @@ class _previous_dataState extends State<previous_data> {
                             currentStatus: pod.status,
                           ),
                         ),
-                      ).then((_) => fetchPods());// refresh after returning
+                      ).then((_) => fetchManualPods());
                     },
                   ),
                 ],
               ),
             ),
-
             DataCell(Text(pod.sender)),
           ]);
         }).toList(),
@@ -278,14 +312,14 @@ class _previous_dataState extends State<previous_data> {
     return WatermarkedScaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xff2a3368),
-        title: const Text('Previous Data', style: TextStyle(color: Colors.white)),
+        title: const Text('Previous Manual POD Data', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: sidebar(),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : podList.isEmpty
-          ? const Center(child: Text("No records found."))
+          ? const Center(child: Text("No manual POD records found."))
           : Padding(
         padding: const EdgeInsets.all(12.0),
         child: Center(
@@ -302,7 +336,7 @@ class _previous_dataState extends State<previous_data> {
                   ),
                 ),
               ),
-              SizedBox(height: 12,),
+              SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -317,7 +351,7 @@ class _previous_dataState extends State<previous_data> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 20,),
+                  SizedBox(width: 20),
                   SizedBox(
                     width: 150,
                     child: TextField(
@@ -329,10 +363,9 @@ class _previous_dataState extends State<previous_data> {
                       ),
                     ),
                   ),
-
                 ],
               ),
-              SizedBox(height: 12,),
+              SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -347,7 +380,7 @@ class _previous_dataState extends State<previous_data> {
                       ),
                     ),
                   ),
-                  SizedBox(width: 20,),
+                  SizedBox(width: 20),
                   SizedBox(
                     width: 150,
                     child: TextField(
@@ -361,14 +394,13 @@ class _previous_dataState extends State<previous_data> {
                   ),
                 ],
               ),
-              SizedBox(height: 12,),
-
+              SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   DropdownButton<String>(
                     value: selectedStatus ?? 'All',
-                    items: ['All','Paid', 'Unpaid']
+                    items: ['All', 'Paid', 'Unpaid']
                         .map((status) => DropdownMenuItem(
                       child: Text(status),
                       value: status,
@@ -398,16 +430,11 @@ class _previous_dataState extends State<previous_data> {
                 onPressed: () async {
                   bool granted = await requestStoragePermission();
                   if (!granted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Storage permission is required.')),
-                    );
+                    _showErrorSnackbar('Storage permission is required.');
                     return;
                   }
-
-                  // Proceed to export and open the Excel file
                   await exportFilteredToExcel();
                 },
-
                 icon: Icon(Icons.download),
                 label: Text("Export to Excel"),
                 style: ElevatedButton.styleFrom(
@@ -416,7 +443,6 @@ class _previous_dataState extends State<previous_data> {
                 ),
               ),
               SizedBox(height: 12),
-
               Expanded(
                 child: Scrollbar(
                   controller: _verticalScrollController,

@@ -7,7 +7,7 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey, KeyDownEvent;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
 import 'config/api.dart';
@@ -75,14 +75,21 @@ class CommonTextField extends StatelessWidget {
   }
 }
 
-class add_data extends StatefulWidget {
-  const add_data({super.key});
+class manual_pod_entry extends StatefulWidget {
+  const manual_pod_entry({super.key});
 
   @override
-  State<add_data> createState() => _add_dataState();
+  State<manual_pod_entry> createState() => _manual_pod_entryState();
 }
 
-class _add_dataState extends State<add_data> {
+class _manual_pod_entryState extends State<manual_pod_entry> {
+  // Manual POD Number and Date fields
+  final TextEditingController _podNumber = TextEditingController();
+  final TextEditingController _dateDay = TextEditingController();
+  final TextEditingController _dateMonth = TextEditingController();
+  final TextEditingController _dateYear = TextEditingController();
+
+  // Regular fields
   final TextEditingController _from = TextEditingController();
   final TextEditingController _to = TextEditingController();
   String selected_doc = 'Documents';
@@ -90,6 +97,12 @@ class _add_dataState extends State<add_data> {
   final TextEditingController _volweight = TextEditingController();
   final TextEditingController _piece = TextEditingController();
   final TextEditingController _rate = TextEditingController();
+
+  // Focus nodes
+  final FocusNode _podNumberFocus = FocusNode();
+  final FocusNode _dateDayFocus = FocusNode();
+  final FocusNode _dateMonthFocus = FocusNode();
+  final FocusNode _dateYearFocus = FocusNode();
   final FocusNode _fromFocus = FocusNode();
   final FocusNode _toFocus = FocusNode();
   final FocusNode _originFocus = FocusNode();
@@ -272,7 +285,6 @@ class _add_dataState extends State<add_data> {
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(width: 1),
                     ),
-
                     child: pw.Column(
                       children: [
                         pw.Container(
@@ -324,7 +336,6 @@ class _add_dataState extends State<add_data> {
                         pw.Container(
                           width: 140,
                           height: 20,
-
                           decoration: pw.BoxDecoration(
                             border: pw.Border.all(width: 1),
                             color: PdfColor.fromInt(0xff2a3368),
@@ -619,8 +630,7 @@ class _add_dataState extends State<add_data> {
                     ),
                     padding: const pw.EdgeInsets.all(4),
                     child: pw.Text(
-                      'I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF '
-                          'THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
+                      'I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
                       style: pw.TextStyle(
                         fontSize: 7,
                         lineSpacing: 2,
@@ -714,8 +724,68 @@ class _add_dataState extends State<add_data> {
     return pdf.save();
   }
 
+  void _clearForm() {
+    setState(() {
+      // Clear all text controllers
+      _podNumber.clear();
+      _dateDay.clear();
+      _dateMonth.clear();
+      _dateYear.clear();
+      _from.clear();
+      _to.clear();
+      _weight.clear();
+      _volweight.clear();
+      _piece.clear();
+      _rate.clear();
+
+      // Reset dropdowns and selections to defaults
+      selected_doc = 'Documents';
+      selected_status = 'Unpaid';
+      selectedOption = senderOptions.isNotEmpty ? senderOptions[0] : null;
+      _origin = locationOptions.isNotEmpty ? locationOptions[0] : null;
+      _destination = locationOptions.length > 1 ? locationOptions[1] : null;
+
+      // Reset amount and submitted pod
+      _amount = 0;
+      submittedPod = null;
+
+      // Move focus back to POD number field
+      FocusScope.of(context).requestFocus(_podNumberFocus);
+    });
+  }
+
   Future<void> submitPodData() async {
     print("🟡 SUBMIT BUTTON PRESSED");
+
+    // Validate manual POD number
+    if (_podNumber.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please enter POD number")),
+      );
+      return;
+    }
+
+    // Validate date fields
+    if (_dateDay.text.isEmpty || _dateMonth.text.isEmpty || _dateYear.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please fill all date fields")),
+      );
+      return;
+    }
+
+    // Validate and parse date
+    int? day = int.tryParse(_dateDay.text.trim());
+    int? month = int.tryParse(_dateMonth.text.trim());
+    int? year = int.tryParse(_dateYear.text.trim());
+
+    if (day == null || month == null || year == null || day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please enter valid date values")),
+      );
+      return;
+    }
+
+    // Validate weight and rate
     if (_weight.text.isEmpty || _rate.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all required fields")),
@@ -725,23 +795,24 @@ class _add_dataState extends State<add_data> {
 
     int? weight = int.tryParse(_weight.text.trim());
     int? rate = int.tryParse(_rate.text.trim());
+    int? podNum = int.tryParse(_podNumber.text.trim());
 
-    if (weight == null || rate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("⚠️ Please enter valid Values")));
+    if (weight == null || rate == null || podNum == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please enter valid values")),
+      );
       return;
     }
 
     final int volWeight = int.tryParse(_volweight.text) ?? 0;
     _amount = (volWeight == 0 ? weight : volWeight) * rate;
 
+    // Validate all other fields
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
         (_origin?.trim().isEmpty ?? true) ||
         (_destination?.trim().isEmpty ?? true) ||
         selected_doc.trim().isEmpty ||
-        _weight.text.trim().isEmpty ||
         _piece.text.trim().isEmpty ||
         selected_status.trim().isEmpty ||
         selectedOption == null ||
@@ -752,23 +823,27 @@ class _add_dataState extends State<add_data> {
       return;
     }
 
-    var url = Uri.parse("${ApiConfig.baseUrl}/submitpod");
+    // Create DateTime object
+    DateTime dateTime = DateTime(year, month, day);
+    String formattedDate = dateTime.toIso8601String();
+
+    var url = Uri.parse("${ApiConfig.baseUrl}/submitpod-manual");
 
     var response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
+        "podNumber": podNum,
+        "date1": formattedDate,
         "from1": _from.text,
         "to1": _to.text,
         "doc": selected_doc,
         "origin": _origin,
         "destination": _destination,
-        "weight": int.tryParse(_weight.text) ?? 0,
-        "vol_weight": _volweight.text.isEmpty
-            ? null
-            : int.tryParse(_volweight.text),
+        "weight": weight,
+        "vol_weight": _volweight.text.isEmpty ? null : int.tryParse(_volweight.text),
         "pieces": int.tryParse(_piece.text) ?? 0,
-        "amount": int.tryParse(_amount.toString()) ?? 0,
+        "amount": _amount,
         "status1": selected_status,
         "sender": selectedOption,
       }),
@@ -777,35 +852,23 @@ class _add_dataState extends State<add_data> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      PodData pod = PodData(
-        podNumber: data['podNumber'],
-        date: data['date1'],
-        formattedDate: DateFormat(
-          'd-MM-yyyy',
-        ).format(DateTime.parse(data['date1'])),
-        from: data['from1'],
-        to: data['to1'],
-        origin: data['origin'],
-        destination: data['destination'],
-        doc: data['doc'],
-        weight: data['weight'],
-        volWeight: data['vol_weight'],
-        pieces: data['pieces'],
-        amount: data['amount'],
-        status: data['status1'],
-        sender: data['sender'],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("✅ POD #${data['podNumber']} submitted successfully"),
+          duration: Duration(seconds: 2),
+        ),
       );
 
-      setState(() {
-        submittedPod = pod;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Data submitted successfully")));
+      // Clear the form for next entry
+      _clearForm();
+    } else if (response.statusCode == 409) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ POD number already exists or conflicts with auto-increment POD")),
+      );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Failed to submit data")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to submit data")),
+      );
       print("Status code: ${response.statusCode}");
       print("Response body: ${response.body}");
     }
@@ -813,6 +876,10 @@ class _add_dataState extends State<add_data> {
 
   @override
   void dispose() {
+    _podNumberFocus.dispose();
+    _dateDayFocus.dispose();
+    _dateMonthFocus.dispose();
+    _dateYearFocus.dispose();
     _fromFocus.dispose();
     _toFocus.dispose();
     _originFocus.dispose();
@@ -831,7 +898,7 @@ class _add_dataState extends State<add_data> {
     return WatermarkedScaffold(
       appBar: AppBar(
         backgroundColor: Color(0xff2a3368),
-        title: Text('New Data', style: TextStyle(color: Colors.white)),
+        title: Text('Manual POD Entry', style: TextStyle(color: Colors.white)),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: sidebar(),
@@ -843,14 +910,78 @@ class _add_dataState extends State<add_data> {
             child: SizedBox(
               width: 900,
               child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Container(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
                     child: Column(
                       children: [
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             SizedBox(height: 30),
+                            // POD Number
+                            Row(
+                              children: [
+                                Text('   POD No.  :  ', style: TextStyle(fontSize: 20)),
+                                SizedBox(
+                                  height: 45,
+                                  width: 150,
+                                  child: CommonTextField(
+                                    hintText: 'Enter POD Number',
+                                    controller: _podNumber,
+                                    keyboardType: TextInputType.number,
+                                    focusNode: _podNumberFocus,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 10),
+                            // Date Entry
+                            Row(
+                              children: [
+                                Text('   Date       :  ', style: TextStyle(fontSize: 20)),
+                                // Day
+                                SizedBox(
+                                  height: 45,
+                                  width: 60,
+                                  child: CommonTextField(
+                                    hintText: 'DD',
+                                    controller: _dateDay,
+                                    keyboardType: TextInputType.number,
+                                    focusNode: _dateDayFocus,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text('/', style: TextStyle(fontSize: 20)),
+                                SizedBox(width: 10),
+                                // Month
+                                SizedBox(
+                                  height: 45,
+                                  width: 60,
+                                  child: CommonTextField(
+                                    hintText: 'MM',
+                                    controller: _dateMonth,
+                                    keyboardType: TextInputType.number,
+                                    focusNode: _dateMonthFocus,
+                                  ),
+                                ),
+                                SizedBox(width: 10),
+                                Text('/', style: TextStyle(fontSize: 20)),
+                                SizedBox(width: 10),
+                                // Year
+                                SizedBox(
+                                  height: 45,
+                                  width: 100,
+                                  child: CommonTextField(
+                                    hintText: 'YYYY',
+                                    controller: _dateYear,
+                                    keyboardType: TextInputType.number,
+                                    focusNode: _dateYearFocus,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 20),
                             Row(
                               children: [
                                 Text('   From :  ', style: TextStyle(fontSize: 20)),
@@ -874,18 +1005,12 @@ class _add_dataState extends State<add_data> {
                                       _from.text = selection;
                                       FocusScope.of(context).requestFocus(_toFocus);
                                     },
-                                    fieldViewBuilder: (
-                                        context,
-                                        controller,
-                                        focusNode,
-                                        onEditingComplete,
-                                        ) {
+                                    fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
                                         textInputAction: TextInputAction.done,
                                         onSubmitted: (value) {
-                                          // Call onEditingComplete which properly handles Autocomplete selection
                                           onEditingComplete();
                                           FocusScope.of(context).requestFocus(_toFocus);
                                         },
@@ -895,19 +1020,14 @@ class _add_dataState extends State<add_data> {
                                         ),
                                       );
                                     },
-
                                   ),
-
                                 ),
                               ],
-                            ), //From name
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   To      :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   To      :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 45,
                                   width: 250,
@@ -928,18 +1048,12 @@ class _add_dataState extends State<add_data> {
                                       _to.text = selection;
                                       FocusScope.of(context).requestFocus(_originFocus);
                                     },
-                                    fieldViewBuilder: (
-                                        context,
-                                        controller,
-                                        focusNode,
-                                        onEditingComplete,
-                                        ) {
+                                    fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
                                         textInputAction: TextInputAction.done,
                                         onSubmitted: (value) {
-                                          // Call onEditingComplete which properly handles Autocomplete selection
                                           onEditingComplete();
                                           FocusScope.of(context).requestFocus(_originFocus);
                                         },
@@ -949,17 +1063,10 @@ class _add_dataState extends State<add_data> {
                                         ),
                                       );
                                     },
-
                                   ),
-
-
-
-
                                 ),
-
-
                               ],
-                            ), //To name
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
@@ -986,24 +1093,19 @@ class _add_dataState extends State<add_data> {
                                       setState(() {
                                         _origin = newValue;
                                       });
-
                                       Future.delayed(Duration(milliseconds: 100), () {
                                         FocusScope.of(context).requestFocus(_destinationFocus);
                                       });
                                     },
                                   ),
                                 ),
-
                                 SizedBox(width: 20),
                               ],
-                            ), //Origin
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Destination : ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   Destination : ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 55,
                                   width: 250,
@@ -1026,17 +1128,15 @@ class _add_dataState extends State<add_data> {
                                       setState(() {
                                         _destination = newValue;
                                       });
-
                                       Future.delayed(Duration(milliseconds: 100), () {
                                         FocusScope.of(context).requestFocus(_weightFocus);
                                       });
                                     },
                                   ),
                                 ),
-
                                 SizedBox(width: 20),
                               ],
-                            ), //Destination
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
@@ -1081,21 +1181,17 @@ class _add_dataState extends State<add_data> {
                                               ? Colors.white
                                               : Color(0xff2a3368),
                                         ),
-
-                                        child: Text('Non-Docx '),
+                                        child: Text('Non-Docx'),
                                       ),
                                     ),
                                   ],
                                 ),
                               ],
-                            ), //Document
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Weight   :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   Weight   :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 45,
                                   width: 75,
@@ -1107,14 +1203,11 @@ class _add_dataState extends State<add_data> {
                                   ),
                                 ),
                               ],
-                            ), //weight
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Vol. Wt   :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   Vol. Wt   :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 45,
                                   width: 75,
@@ -1126,14 +1219,11 @@ class _add_dataState extends State<add_data> {
                                   ),
                                 ),
                               ],
-                            ), //volumetric weight
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Pieces    :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   Pieces    :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 45,
                                   width: 75,
@@ -1145,15 +1235,11 @@ class _add_dataState extends State<add_data> {
                                   ),
                                 ),
                               ],
-                            ), //No. of pieces
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Rate        :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
-
+                                Text('   Rate        :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 45,
                                   width: 150,
@@ -1171,7 +1257,6 @@ class _add_dataState extends State<add_data> {
                                     ),
                                   ),
                                 ),
-
                                 SizedBox(width: 100),
                                 SizedBox(
                                   height: 45,
@@ -1179,24 +1264,16 @@ class _add_dataState extends State<add_data> {
                                   child: ElevatedButton(
                                     onPressed: () {
                                       setState(() {
-                                        if (_weight.text.isEmpty ||
-                                            _rate.text.isEmpty) {
+                                        if (_weight.text.isEmpty || _rate.text.isEmpty) {
                                           ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                "Please enter both weight and rate",
-                                              ),
-                                            ),
+                                            SnackBar(content: Text("Please enter both weight and rate")),
                                           );
                                           return;
                                         }
 
-                                        final int weight =
-                                            int.tryParse(_weight.text) ?? 0;
-                                        final int volWeight =
-                                            int.tryParse(_volweight.text) ?? 0;
-                                        final int rate =
-                                            int.tryParse(_rate.text) ?? 0;
+                                        final int weight = int.tryParse(_weight.text) ?? 0;
+                                        final int volWeight = int.tryParse(_volweight.text) ?? 0;
+                                        final int rate = int.tryParse(_rate.text) ?? 0;
 
                                         if (volWeight == 0) {
                                           _amount = weight * rate;
@@ -1216,29 +1293,18 @@ class _add_dataState extends State<add_data> {
                                 Container(
                                   padding: EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.black,
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(
-                                      4,
-                                    ),
+                                    border: Border.all(color: Colors.black, width: 1),
+                                    borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Text(
-                                    '$_amount',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
+                                  child: Text('$_amount', style: TextStyle(fontSize: 18)),
                                 ),
                                 SizedBox(width: 50),
                               ],
-                            ), //Amount to be Paid
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '  Status      :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('  Status      :  ', style: TextStyle(fontSize: 20)),
                                 Row(
                                   children: [
                                     SizedBox(
@@ -1279,21 +1345,17 @@ class _add_dataState extends State<add_data> {
                                               ? Colors.white
                                               : Color(0xff2a3368),
                                         ),
-
                                         child: Text('Unpaid'),
                                       ),
                                     ),
                                   ],
                                 ),
                               ],
-                            ), //Payment Status
+                            ),
                             SizedBox(height: 10),
                             Row(
                               children: [
-                                Text(
-                                  '   Sender  :  ',
-                                  style: TextStyle(fontSize: 20),
-                                ),
+                                Text('   Sender  :  ', style: TextStyle(fontSize: 20)),
                                 SizedBox(
                                   height: 50,
                                   width: 225,
@@ -1314,17 +1376,15 @@ class _add_dataState extends State<add_data> {
                                       setState(() {
                                         selectedOption = newValue;
                                       });
-
                                       Future.delayed(Duration(milliseconds: 100), () {
                                         FocusScope.of(context).requestFocus(_submitFocus);
                                       });
                                     },
                                   ),
                                 ),
-
                                 SizedBox(width: 20),
                               ],
-                            ), //Sender
+                            ),
                             SizedBox(height: 25),
                             Row(
                               children: [
@@ -1338,44 +1398,19 @@ class _add_dataState extends State<add_data> {
                                       bool? confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (context) {
-                                          return Shortcuts(
-                                            shortcuts: {
-                                              LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-                                              LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
-                                            },
-                                            child: Actions(
-                                              actions: {
-                                                ActivateIntent: CallbackAction<ActivateIntent>(
-                                                  onInvoke: (intent) {
-                                                    Navigator.of(context).pop(true);
-                                                    return null;
-                                                  },
-                                                ),
-                                                DismissIntent: CallbackAction<DismissIntent>(
-                                                  onInvoke: (intent) {
-                                                    Navigator.of(context).pop(false);
-                                                    return null;
-                                                  },
-                                                ),
-                                              },
-                                              child: Focus(
-                                                autofocus: true,
-                                                child: AlertDialog(
-                                                  title: const Text("Are you sure?"),
-                                                  content: const Text("Do you want to submit this data?"),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(context, false),
-                                                      child: const Text("No"),
-                                                    ),
-                                                    ElevatedButton(
-                                                      onPressed: () => Navigator.pop(context, true),
-                                                      child: const Text("Yes"),
-                                                    ),
-                                                  ],
-                                                ),
+                                          return AlertDialog(
+                                            title: const Text("Are you sure?"),
+                                            content: const Text("Do you want to submit this data?"),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context, false),
+                                                child: const Text("No"),
                                               ),
-                                            ),
+                                              ElevatedButton(
+                                                onPressed: () => Navigator.pop(context, true),
+                                                child: const Text("Yes"),
+                                              ),
+                                            ],
                                           );
                                         },
                                       );
@@ -1383,53 +1418,24 @@ class _add_dataState extends State<add_data> {
                                       if (confirm ?? false) {
                                         submitPodData();
                                       }
-
                                     },
                                     child: Text('Submit'),
                                   ),
                                 ),
-
                               ],
-                            ), //submit
-                            SizedBox(height: 25),
-                            Row(
-                              children: [
-                                SizedBox(width: 100),
-                                SizedBox(
-                                  height: 50,
-                                  width: 150,
-                                  child: ElevatedButton(
-                                    onPressed: submittedPod == null
-                                        ? null
-                                        : () => generateAndPreviewInvoice(
-                                      context,
-                                      submittedPod!,
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.purple.shade900,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Text('Preview'),
-                                  ),
-                                ),
-                              ],
-                            ), //Preview
+                            ),
                             SizedBox(height: 25),
                           ],
                         ),
                       ],
                     ),
-                  ),]
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-
-
     );
   }
 }
