@@ -724,6 +724,36 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
     return pdf.save();
   }
 
+  void _clearForm() {
+    setState(() {
+      // Clear all text controllers
+      _podNumber.clear();
+      _dateDay.clear();
+      _dateMonth.clear();
+      _dateYear.clear();
+      _from.clear();
+      _to.clear();
+      _weight.clear();
+      _volweight.clear();
+      _piece.clear();
+      _rate.clear();
+
+      // Reset dropdowns and selections to defaults
+      selected_doc = 'Documents';
+      selected_status = 'Unpaid';
+      selectedOption = senderOptions.isNotEmpty ? senderOptions[0] : null;
+      _origin = locationOptions.isNotEmpty ? locationOptions[0] : null;
+      _destination = locationOptions.length > 1 ? locationOptions[1] : null;
+
+      // Reset amount and submitted pod
+      _amount = 0;
+      submittedPod = null;
+
+      // Move focus back to POD number field
+      FocusScope.of(context).requestFocus(_podNumberFocus);
+    });
+  }
+
   Future<void> submitPodData() async {
     print("🟡 SUBMIT BUTTON PRESSED");
 
@@ -822,29 +852,15 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      PodData pod = PodData(
-        podNumber: data['podNumber'],
-        date: data['date1'],
-        formattedDate: DateFormat('d-MM-yyyy').format(DateTime.parse(data['date1'])),
-        from: data['from1'],
-        to: data['to1'],
-        origin: data['origin'],
-        destination: data['destination'],
-        doc: data['doc'],
-        weight: data['weight'],
-        volWeight: data['vol_weight'],
-        pieces: data['pieces'],
-        amount: data['amount'],
-        status: data['status1'],
-        sender: data['sender'],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("✅ POD #${data['podNumber']} submitted successfully"),
+          duration: Duration(seconds: 2),
+        ),
       );
 
-      setState(() {
-        submittedPod = pod;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ Data submitted successfully")),
-      );
+      // Clear the form for next entry
+      _clearForm();
     } else if (response.statusCode == 409) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ POD number already exists or conflicts with auto-increment POD")),
@@ -1404,29 +1420,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                       }
                                     },
                                     child: Text('Submit'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 25),
-                            Row(
-                              children: [
-                                SizedBox(width: 100),
-                                SizedBox(
-                                  height: 50,
-                                  width: 150,
-                                  child: ElevatedButton(
-                                    onPressed: submittedPod == null
-                                        ? null
-                                        : () => generateAndPreviewInvoice(context, submittedPod!),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.purple.shade900,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                    ),
-                                    child: Text('Preview'),
                                   ),
                                 ),
                               ],
