@@ -139,7 +139,7 @@ class _sidebarState extends State<sidebar> {
           ),
           ListTile(
             leading: Icon(Icons.preview),
-            title: Text('Previous Data'),
+            title: Text('Previous New Data'),
             onTap: () {
               Navigator.push(context, MaterialPageRoute(builder: (context)=> previous_data()));
             },

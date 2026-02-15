@@ -32,6 +32,7 @@ class _previous_dataState extends State<previous_data> {
   TextEditingController fromController = TextEditingController();
   TextEditingController toController = TextEditingController();
   TextEditingController idController = TextEditingController();
+  final ScrollController _verticalScrollController = ScrollController();
   DateTime? startDate;
   DateTime? endDate;
   String? selectedStatus;
@@ -40,6 +41,12 @@ class _previous_dataState extends State<previous_data> {
   void initState() {
     super.initState();
     fetchPods();
+  }
+
+  @override
+  void dispose() {
+    _verticalScrollController.dispose();
+    super.dispose();
   }
 
 
@@ -412,9 +419,11 @@ class _previous_dataState extends State<previous_data> {
 
               Expanded(
                 child: Scrollbar(
-                  thickness: 8,
+                  controller: _verticalScrollController,
                   thumbVisibility: true,
+                  thickness: 8,
                   child: SingleChildScrollView(
+                    controller: _verticalScrollController,
                     scrollDirection: Axis.vertical,
                     child: buildTable(),
                   ),

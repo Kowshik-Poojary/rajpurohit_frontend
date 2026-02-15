@@ -6,7 +6,7 @@ import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 import 'config/api.dart';
 
 class EditPaymentStatusPage extends StatefulWidget {
-  final int podId; // ID of the record
+  final int podId; // Pod number (not MongoDB _id)
   final String currentStatus;
 
   const EditPaymentStatusPage({
@@ -21,7 +21,8 @@ class EditPaymentStatusPage extends StatefulWidget {
 
 class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
   String? _selectedStatus;
-  final String apiUrl = '${ApiConfig.baseUrl}'; // replace with your IP
+  bool _isLoading = false;
+  final String apiUrl = '${ApiConfig.baseUrl}';
 
   Future<void> showLoginPrompt() async {
     final TextEditingController usernameController = TextEditingController();
@@ -69,7 +70,7 @@ class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
                 } else {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Invalid username or password')),
+                    SnackBar(content: Text('❌ Invalid username or password')),
                   );
                 }
               },
@@ -87,24 +88,58 @@ class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
   }
 
   Future<void> updateStatus() async {
-    final url = Uri.parse('$apiUrl/update-payment-status/${widget.podId}');
+    // ✅ FIXED: Use correct endpoint
+    final url = Uri.parse('$apiUrl/update-volweight/${widget.podId}');
+
+    print("🟡 UPDATE REQUEST");
+    print("📍 URL: $url");
+    print("📦 Pod ID: ${widget.podId}");
+    print("📝 New Status: $_selectedStatus");
+
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
       final response = await http.put(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'status1': _selectedStatus}),
+        body: jsonEncode({
+          'status1': _selectedStatus,
+        }),
       );
+
+      print("📥 Response Status Code: ${response.statusCode}");
+      print("📥 Response Body: ${response.body}");
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Status updated to $_selectedStatus')),
+          SnackBar(
+            content: Text('✅ Status updated to $_selectedStatus'),
+            backgroundColor: Colors.green,
+          ),
         );
-        Navigator.pop(context); // Go back to previous page
+        Navigator.pop(context, true); // Return true to indicate success
       } else {
-        print('❌ Failed: ${response.body}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Failed to update status: ${response.body}'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } catch (e) {
       print('❌ Exception: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -119,7 +154,14 @@ class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: 20),
+            Text(
+              'Pod #${widget.podId}',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 20),
             DropdownButtonFormField<String>(
               value: _selectedStatus,
               decoration: InputDecoration(
@@ -132,21 +174,36 @@ class _EditPaymentStatusPageState extends State<EditPaymentStatusPage> {
                   child: Text(status),
                 );
               }).toList(),
-              onChanged: (value) {
+              onChanged: _isLoading
+                  ? null
+                  : (value) {
                 setState(() {
                   _selectedStatus = value!;
                 });
               },
             ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: showLoginPrompt,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xff2a3368),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : showLoginPrompt,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xff2a3368),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  disabledBackgroundColor: Colors.grey,
+                ),
+                child: _isLoading
+                    ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                    : Text('Save', style: TextStyle(fontSize: 16)),
               ),
-              child: Text('Save', style: TextStyle(fontSize: 16)),
             ),
           ],
         ),

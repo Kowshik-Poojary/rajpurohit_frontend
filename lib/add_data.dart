@@ -66,7 +66,7 @@ class CommonTextField extends StatelessWidget {
       controller: controller,
       focusNode: focusNode,
       keyboardType: keyboardType,
-      textInputAction: TextInputAction.next, // 🔥 Let Flutter handle traversal
+      textInputAction: TextInputAction.next,
       decoration: InputDecoration(
         hintText: hintText,
         border: OutlineInputBorder(),
@@ -85,7 +85,7 @@ class add_data extends StatefulWidget {
 class _add_dataState extends State<add_data> {
   final TextEditingController _from = TextEditingController();
   final TextEditingController _to = TextEditingController();
-  String selected_doc = 'Documents'; // Default selected option
+  String selected_doc = 'Documents';
   final TextEditingController _weight = TextEditingController();
   final TextEditingController _volweight = TextEditingController();
   final TextEditingController _piece = TextEditingController();
@@ -124,7 +124,7 @@ class _add_dataState extends State<add_data> {
         nameSuggestions = data
             .map((e) => e['name'].toString())
             .toSet()
-            .toList(); // ensure uniqueness
+            .toList();
       });
     } else {
       print('❌ Failed to fetch suggestions');
@@ -165,7 +165,7 @@ class _add_dataState extends State<add_data> {
               .map<String>((e) => e['name'].toString())
               .toList();
           if (selectedOption == null && senderOptions.isNotEmpty) {
-            selectedOption = senderOptions[0]; // set default
+            selectedOption = senderOptions[0];
           }
         });
       } else {
@@ -199,9 +199,9 @@ class _add_dataState extends State<add_data> {
   }
 
   Future<void> generateAndPreviewInvoice(
-    BuildContext context,
-    PodData pod,
-  ) async {
+      BuildContext context,
+      PodData pod,
+      ) async {
     final fetchedAddress = await fetchAddress();
     print("Generating PDF with address: $fetchedAddress");
     Navigator.push(
@@ -620,7 +620,7 @@ class _add_dataState extends State<add_data> {
                     padding: const pw.EdgeInsets.all(4),
                     child: pw.Text(
                       'I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF '
-                      'THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
+                          'THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
                       style: pw.TextStyle(
                         fontSize: 7,
                         lineSpacing: 2,
@@ -685,10 +685,10 @@ class _add_dataState extends State<add_data> {
   }
 
   Future<Uint8List> _generatePdf(
-    PdfPageFormat format,
-    PodData pod,
-    String address,
-  ) async {
+      PdfPageFormat format,
+      PodData pod,
+      String address,
+      ) async {
     final pdf = pw.Document();
     final imageBytes = await rootBundle.load('assets/images/logo1.png');
     final image = pw.MemoryImage(imageBytes.buffer.asUint8List());
@@ -699,11 +699,11 @@ class _add_dataState extends State<add_data> {
         build: (context) => pw.Column(
           children: List.generate(
             3,
-            (index) => pw.Column(
+                (index) => pw.Column(
               children: [
                 buildInvoice(pod, image, address),
                 if (index < 2)
-                  pw.Divider(), // Divider between copies (except after last one)
+                  pw.Divider(),
               ],
             ),
           ),
@@ -777,7 +777,6 @@ class _add_dataState extends State<add_data> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      // Extract values from backend response
       PodData pod = PodData(
         podNumber: data['podNumber'],
         date: data['date1'],
@@ -797,7 +796,6 @@ class _add_dataState extends State<add_data> {
         sender: data['sender'],
       );
 
-      // ✅ Pass it to generate function
       setState(() {
         submittedPod = pod;
       });
@@ -845,7 +843,7 @@ class _add_dataState extends State<add_data> {
             child: SizedBox(
               width: 900,
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [Container(
                     child: Column(
                       children: [
@@ -873,7 +871,7 @@ class _add_dataState extends State<add_data> {
                                       );
                                     },
                                     onSelected: (String selection) {
-                                      _from.text = selection;   // store final value here
+                                      _from.text = selection;
                                       FocusScope.of(context).requestFocus(_toFocus);
                                     },
                                     fieldViewBuilder: (
@@ -885,12 +883,10 @@ class _add_dataState extends State<add_data> {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
-                                        textInputAction: TextInputAction.done, // 🔥 important
+                                        textInputAction: TextInputAction.done,
                                         onSubmitted: (value) {
-                                          // 🔥 If user presses Enter without selecting
-                                          if (nameSuggestions.contains(value)) {
-                                            _from.text = value;
-                                          }
+                                          // Call onEditingComplete which properly handles Autocomplete selection
+                                          onEditingComplete();
                                           FocusScope.of(context).requestFocus(_toFocus);
                                         },
                                         decoration: const InputDecoration(
@@ -943,9 +939,8 @@ class _add_dataState extends State<add_data> {
                                         focusNode: focusNode,
                                         textInputAction: TextInputAction.done,
                                         onSubmitted: (value) {
-                                          if (nameSuggestions.contains(value)) {
-                                            _to.text = value;
-                                          }
+                                          // Call onEditingComplete which properly handles Autocomplete selection
+                                          onEditingComplete();
                                           FocusScope.of(context).requestFocus(_originFocus);
                                         },
                                         decoration: const InputDecoration(
@@ -974,7 +969,7 @@ class _add_dataState extends State<add_data> {
                                   width: 250,
                                   child: DropdownButtonFormField<String>(
                                     focusNode: _originFocus,
-                                    isExpanded: true,  // ✅ VERY IMPORTANT
+                                    isExpanded: true,
                                     decoration: InputDecoration(
                                       labelText: 'Origin',
                                       border: OutlineInputBorder(),
@@ -992,7 +987,6 @@ class _add_dataState extends State<add_data> {
                                         _origin = newValue;
                                       });
 
-                                      // 🔥 MOVE FOCUS AFTER SELECTION
                                       Future.delayed(Duration(milliseconds: 100), () {
                                         FocusScope.of(context).requestFocus(_destinationFocus);
                                       });
@@ -1204,7 +1198,6 @@ class _add_dataState extends State<add_data> {
                                         final int rate =
                                             int.tryParse(_rate.text) ?? 0;
 
-                                        // Main logic
                                         if (volWeight == 0) {
                                           _amount = weight * rate;
                                         } else {
@@ -1226,10 +1219,10 @@ class _add_dataState extends State<add_data> {
                                     border: Border.all(
                                       color: Colors.black,
                                       width: 1,
-                                    ), // Border color and width
+                                    ),
                                     borderRadius: BorderRadius.circular(
                                       4,
-                                    ), // Optional: rounded corners
+                                    ),
                                   ),
                                   child: Text(
                                     '$_amount',
@@ -1322,7 +1315,6 @@ class _add_dataState extends State<add_data> {
                                         selectedOption = newValue;
                                       });
 
-                                      // 🔥 MOVE TO SUBMIT AFTER SELECTION
                                       Future.delayed(Duration(milliseconds: 100), () {
                                         FocusScope.of(context).requestFocus(_submitFocus);
                                       });
