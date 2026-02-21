@@ -119,28 +119,39 @@ class _previous_dataState extends State<previous_data> {
     var excel = Excel.createExcel();
     Sheet sheet = excel['Filtered POD'];
 
-    // Add header
+    // Add header with CellValue wrapper
     sheet.appendRow([
-      'POD No.', 'Date', 'From', 'To', 'Origin', 'Destination',
-      'Doc', 'Weight', 'Vol Weight', 'Pieces', 'Amount', 'Status', 'Sender'
+      TextCellValue('POD No.'),
+      TextCellValue('Date'),
+      TextCellValue('From'),
+      TextCellValue('To'),
+      TextCellValue('Origin'),
+      TextCellValue('Destination'),
+      TextCellValue('Doc'),
+      TextCellValue('Weight'),
+      TextCellValue('Vol Weight'),
+      TextCellValue('Pieces'),
+      TextCellValue('Amount'),
+      TextCellValue('Status'),
+      TextCellValue('Sender'),
     ]);
 
-    // Add data
+    // Add data rows
     for (var pod in filteredList) {
       sheet.appendRow([
-        pod.podNumber,
-        pod.formattedDate,
-        pod.from,
-        pod.to,
-        pod.origin,
-        pod.destination,
-        pod.doc,
-        pod.weight,
-        pod.volWeight,
-        pod.pieces,
-        pod.amount,
-        pod.status,
-        pod.sender,
+        IntCellValue(pod.podNumber),
+        TextCellValue(pod.formattedDate),
+        TextCellValue(pod.from),
+        TextCellValue(pod.to),
+        TextCellValue(pod.origin),
+        TextCellValue(pod.destination),
+        TextCellValue(pod.doc),
+        TextCellValue(pod.weight),
+        TextCellValue(pod.volWeight),
+        TextCellValue(pod.pieces),
+        TextCellValue(pod.amount),
+        TextCellValue(pod.status),
+        TextCellValue(pod.sender),
       ]);
     }
 
@@ -150,12 +161,11 @@ class _previous_dataState extends State<previous_data> {
     final file = File(path);
     await file.writeAsBytes(excel.encode()!);
 
-    // Open the Excel file using the default app
+    // Open the Excel file
     final result = await OpenFile.open(path);
-
     if (result.type != ResultType.done) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to open file. Please install Excel app.')),
+        const SnackBar(content: Text('Failed to open file. Please install Excel app.')),
       );
     }
   }
