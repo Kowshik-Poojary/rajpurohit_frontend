@@ -304,7 +304,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
     );
 
-    // ✅ FIXED: Wrap values in proper CellValue types
+    // Shorthand helpers — old API sets value directly (String or int)
     void setText(int col, int row, String value, xl.CellStyle style) {
       final cell = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
       cell.value = xl.TextCellValue(value);
@@ -389,41 +389,50 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     final int dataEndExcel = dataEndIdx + 1;
     int fRow = dataEndIdx + 1;
 
+    // Calculate totals from data
+    int totalWeight = 0;
+    int totalAmount = 0;
+    for (var pod in filteredList) {
+      totalWeight += int.tryParse(pod.weight) ?? 0;
+      totalAmount += int.tryParse(pod.amount) ?? 0;
+    }
+    int cgstAmount = (totalAmount * 9) ~/ 100;
+    int sgstAmount = (totalAmount * 9) ~/ 100;
+    int roundupAmount = ((totalAmount + cgstAmount + sgstAmount + 99) ~/ 100) * 100 - (totalAmount + cgstAmount + sgstAmount);
+    int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
+
     // Total Weight
     mergeRange(4, fRow, 5, fRow);
     setText(4, fRow, 'Total Weight', footerLabel());
-    setText(5, fRow, '=SUM(F$dataStartExcel:F$dataEndExcel)', footerValue());
+    setInt(5, fRow, totalWeight, footerValue());  // ✅ Show calculated value directly
     fRow++;
 
     // Amount
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Amount', footerLabel());
     final int amountExcel = fRow + 1;
-    setText(7, fRow, '=SUM(H$dataStartExcel:H$dataEndExcel)', footerValue());
+    setInt(7, fRow, totalAmount, footerValue());  // ✅ Show calculated value directly
     fRow++;
 
     // CGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'CGST 9%', footerLabel());
     final int cgstExcel = fRow + 1;
-    setText(7, fRow, '=H$amountExcel*9%', footerValue());
+    setInt(7, fRow, cgstAmount, footerValue());  // ✅ Show calculated value directly
     fRow++;
 
     // SGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'SGST 9%', footerLabel());
     final int sgstExcel = fRow + 1;
-    setText(7, fRow, '=H$amountExcel*9%', footerValue());
+    setInt(7, fRow, sgstAmount, footerValue());  // ✅ Show calculated value directly
     fRow++;
 
     // Roundup
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Roundup', footerLabel());
     final int roundupExcel = fRow + 1;
-    setText(7, fRow,
-        '=CEILING(H$amountExcel+H$cgstExcel+H$sgstExcel,1)'
-            '-(H$amountExcel+H$cgstExcel+H$sgstExcel)',
-        footerValue());
+    setInt(7, fRow, roundupAmount, footerValue());  // ✅ Show calculated value directly
     fRow++;
 
     // Total Amount
@@ -436,18 +445,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
           horizontalAlign: xl.HorizontalAlign.Right,
           verticalAlign: xl.VerticalAlign.Center,
         ));
-    setText(7, fRow, '=SUM(H$amountExcel:H$roundupExcel)',
-        xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-          bold: true,
-          fontSize: 11,
-          horizontalAlign: xl.HorizontalAlign.Right,
-          verticalAlign: xl.VerticalAlign.Center,
-          topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-          bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Double),
-          leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-          rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-        ));
+    setInt(7, fRow, totalFinal, footerValue());  // ✅ Show calculated value directly
     fRow += 2;
 
     // Yours Truly
@@ -470,22 +468,73 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       }
 
       final String filePath = path_path.join(saveDir, fileName);
-      await File(filePath).writeAsBytes(excelFile.encode()!);
+      final file = File(filePath);
+      await file.writeAsBytes(excelFile.encode()!);
 
       print('✅ Invoice saved to: $filePath');
-      print('File exists: ${await File(filePath).exists()}');
-      print('File size: ${(await File(filePath).stat()).size} bytes');
+      print('File exists: ${await file.exists()}');
+      print('File size: ${(await file.stat()).size} bytes');
 
-      _showSuccessSnackbar('Invoice saved to:\n$filePath');
+      _showSuccessSnackbar('Invoice saved to:\n$filePath\n\nOpening Excel...');
 
-      // Try to open the file
-      final result = await OpenFile.open(filePath);
-      if (result.type != ResultType.done) {
-        print('File saved at: $filePath');
+      // Wait a moment to ensure file is fully written
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      bool fileOpened = false;
+
+      // Try to open the file with retry logic
+      for (int attempt = 0; attempt < 3; attempt++) {
+        try {
+          final result = await OpenFile.open(filePath);
+          print('Attempt ${attempt + 1} - OpenFile result: ${result.type}, message: ${result.message}');
+
+          if (result.type.toString() == 'ResultType.done') {
+            print('✅ File opened successfully on attempt ${attempt + 1}');
+            fileOpened = true;
+            break;
+          } else {
+            print('⚠️ Attempt ${attempt + 1}: Could not open (${result.type})');
+            // Check if message indicates no app found
+            if (result.message.toLowerCase().contains('no app found') ||
+                result.message.isEmpty ||
+                result.message.toLowerCase().contains('error')) {
+              if (attempt == 2) {
+                print('⚠️ Failed to open file - no suitable app found');
+                _showErrorSnackbar(
+                    'Excel app not found.\n\n'
+                        'File saved at:\n$filePath\n\n'
+                        'Please install Excel or LibreOffice Calc'
+                );
+              }
+            }
+          }
+
+          // Wait before retry
+          if (attempt < 2) {
+            await Future.delayed(const Duration(milliseconds: 500));
+          }
+        } catch (e) {
+          print('Error on attempt ${attempt + 1}: $e');
+          if (attempt == 2) {
+            print('Failed to open file after 3 attempts');
+          }
+        }
+      }
+
+      if (fileOpened) {
+        print('✅ SUCCESS: File saved and opened successfully');
+      } else {
+        print('⚠️ WARNING: File saved but could not auto-open');
+        print('File path: $filePath');
+        _showSuccessSnackbar(
+            'File saved successfully at:\n$filePath\n\n'
+                'Please open manually or install Excel app.'
+        );
       }
     } catch (e) {
       _showErrorSnackbar('Export failed: $e');
-      print('Export error: $e');
+      print('❌ Export error: $e');
+      print('Stack trace: ${e.toString()}');
     }
   }
 
