@@ -242,41 +242,57 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     }
 
     // ── Style helpers ─────────────────────────────────────────────────────
-    xl.CellStyle centeredBold({int size = 11}) => xl.CellStyle(
+    xl.CellStyle companyHeader({int size = 14}) => xl.CellStyle(
       fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
       bold: true,
       fontSize: size,
       horizontalAlign: xl.HorizontalAlign.Center,
       verticalAlign: xl.VerticalAlign.Center,
+      topBorder: size == 16 ? xl.Border(borderStyle: xl.BorderStyle.Medium) : null,
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
-    xl.CellStyle plain({xl.HorizontalAlign align = xl.HorizontalAlign.Left, bool bold = false}) =>
-        xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-          bold: bold,
-          fontSize: 11,
-          horizontalAlign: align,
-          verticalAlign: xl.VerticalAlign.Center,
-        );
+    xl.CellStyle subHeader({int size = 11}) => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: true,
+      fontSize: size,
+      horizontalAlign: xl.HorizontalAlign.Center,
+      verticalAlign: xl.VerticalAlign.Center,
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
 
-    xl.CellStyle bordered({xl.HorizontalAlign align = xl.HorizontalAlign.Center, bool bold = false}) =>
-        xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-          bold: bold,
-          fontSize: 11,
-          horizontalAlign: align,
-          verticalAlign: xl.VerticalAlign.Center,
-          topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-          bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-          leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-          rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-        );
+    xl.CellStyle addressLabel() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: true,
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Left,
+      verticalAlign: xl.VerticalAlign.Top,
+    );
 
-    // ✅ FIXED: Removed invalid backgroundColorHex, using proper property if available
+    xl.CellStyle addressText() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Left,
+      verticalAlign: xl.VerticalAlign.Top,
+    );
+
     xl.CellStyle tableHeader() => xl.CellStyle(
       fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
       bold: true,
       fontSize: 11,
+      horizontalAlign: xl.HorizontalAlign.Center,
+      verticalAlign: xl.VerticalAlign.Center,
+      topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle dataCell() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Center,
       verticalAlign: xl.VerticalAlign.Center,
       topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
@@ -285,12 +301,62 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
     );
 
+    xl.CellStyle dataCellLeft() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Left,
+      verticalAlign: xl.VerticalAlign.Center,
+      topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+    );
+
+    xl.CellStyle billBorderLeft() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: false,
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Left,
+      verticalAlign: xl.VerticalAlign.Center,
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle billBorderRight() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: false,
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Left,
+      verticalAlign: xl.VerticalAlign.Center,
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle billBorderBottom() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: false,
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle plain({xl.HorizontalAlign align = xl.HorizontalAlign.Left, bool bold = false}) =>
+        xl.CellStyle(
+          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+          bold: bold,
+          fontSize: 10,
+          horizontalAlign: align,
+          verticalAlign: xl.VerticalAlign.Center,
+          leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+          rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+        );
+
     xl.CellStyle footerLabel() => xl.CellStyle(
       fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
       bold: true,
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
     xl.CellStyle footerValue() => xl.CellStyle(
@@ -301,7 +367,28 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
       bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
       leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle footerValueBold() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      bold: true,
+      fontSize: 12,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+
+    xl.CellStyle signatureStyle() => xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
     // Shorthand helpers — old API sets value directly (String or int)
@@ -326,24 +413,26 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
     // ── Rows 0–4: Company header (merged A:H) ─────────────────────────────
     final List<Map<String, dynamic>> headerLines = [
-      {'text': 'JOGSINGH A. RAJPUROHIT', 'bold': true, 'size': 12},
-      {'text': 'OTC SERVICE DAILY – MUMBAI TO C. Sambhajinagar-AHAMAD NAGAR - Pune', 'bold': true, 'size': 11},
-      {'text': 'Office : 307,Ganesh Society,Gautam Nagar', 'bold': false, 'size': 11},
-      {'text': 'GSTIN:27BUXPS4675M1ZA        Andheri[E], Mumbai400093', 'bold': false, 'size': 11},
-      {'text': '                PAN No. BUXPS4675M', 'bold': false, 'size': 11},
+      {'text': 'JOGSINGH A. RAJPUROHIT', 'bold': true, 'size': 16},
+      {'text': 'OTC SERVICE DAILY – MUMBAI TO C. Sambhajinagar-AHAMAD NAGAR - Pune', 'bold': true, 'size': 12},
+      {'text': 'Office : 307,Ganesh Society,Gautam Nagar', 'bold': false, 'size': 10},
+      {'text': 'GSTIN:27BUXPS4675M1ZA        Andheri[E], Mumbai400093', 'bold': false, 'size': 10},
+      {'text': 'PAN No. BUXPS4675M', 'bold': false, 'size': 10},
     ];
     for (int i = 0; i < headerLines.length; i++) {
       mergeRange(0, i, 7, i);
-      setText(0, i, headerLines[i]['text'] as String,
-          centeredBold(size: headerLines[i]['size'] as int));
+      if (i == 0) {
+        setText(0, i, headerLines[i]['text'] as String, companyHeader(size: 16));
+      } else if (i == 1) {
+        setText(0, i, headerLines[i]['text'] as String, subHeader(size: 12));
+      } else {
+        setText(0, i, headerLines[i]['text'] as String, subHeader(size: 10));
+      }
     }
 
-    // ── Row 5: "To," / HSN CODE / BILL NO. ───────────────────────────────
+    // ── Row 5: Bill Details ───────────────────────────────────────────────
     mergeRange(0, 5, 1, 5);
     setText(0, 5, 'To, ', plain());
-
-    mergeRange(3, 5, 5, 5);
-    setText(3, 5, 'HSN CODE:9968', plain());
 
     mergeRange(6, 5, 7, 5);
     setText(6, 5, 'BILL NO. :', plain());
@@ -373,87 +462,99 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       final PodData pod = filteredList[i];
       final int r = dataStartIdx + i;
 
-      setInt(0, r, i + 1, bordered());
-      setText(1, r, pod.formattedDate, bordered());
-      setInt(2, r, pod.podNumber, bordered());
-      setText(3, r, pod.from, bordered());
-      setText(4, r, pod.to, bordered());
-      setInt(5, r, int.tryParse(pod.weight) ?? 0, bordered());
-      setInt(6, r, int.tryParse(pod.pieces) ?? 0, bordered());
-      setInt(7, r, int.tryParse(pod.amount) ?? 0, bordered(align: xl.HorizontalAlign.Right));
+      setInt(0, r, i + 1, dataCell());
+      setText(1, r, pod.formattedDate, dataCell());
+      setInt(2, r, pod.podNumber, dataCell());
+      setText(3, r, pod.from, dataCellLeft());
+      setText(4, r, pod.to, dataCellLeft());
+      setInt(5, r, int.tryParse(pod.weight) ?? 0, dataCell());
+      setInt(6, r, int.tryParse(pod.pieces) ?? 0, dataCell());
+      setInt(7, r, int.tryParse(pod.amount) ?? 0, dataCell());
     }
 
     // ── Footer ────────────────────────────────────────────────────────────
     final int dataEndIdx = dataStartIdx + filteredList.length - 1;
-    final int dataStartExcel = dataStartIdx + 1;
-    final int dataEndExcel = dataEndIdx + 1;
     int fRow = dataEndIdx + 1;
 
     // Calculate totals from data
-    int totalWeight = 0;
     int totalAmount = 0;
     for (var pod in filteredList) {
-      totalWeight += int.tryParse(pod.weight) ?? 0;
       totalAmount += int.tryParse(pod.amount) ?? 0;
     }
-    int cgstAmount = (totalAmount * 9) ~/ 100;
-    int sgstAmount = (totalAmount * 9) ~/ 100;
-    int roundupAmount = ((totalAmount + cgstAmount + sgstAmount + 99) ~/ 100) * 100 - (totalAmount + cgstAmount + sgstAmount);
-    int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
 
-    // Total Weight
-    mergeRange(4, fRow, 5, fRow);
-    setText(4, fRow, 'Total Weight', footerLabel());
-    setInt(5, fRow, totalWeight, footerValue());  // ✅ Show calculated value directly
-    fRow++;
+    // ✅ FIXED: Proper decimal rounding (105.48 -> 106, 105.50 -> 106)
+    double cgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
+    double sgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
+
+    // Round up to nearest integer
+    int cgstAmount = cgstAmountDouble.ceil();
+    int sgstAmount = sgstAmountDouble.ceil();
+
+    // Calculate roundup with proper rounding
+    double subtotalDouble = totalAmount.toDouble() + cgstAmount.toDouble() + sgstAmount.toDouble();
+    int subtotalRounded = subtotalDouble.ceil();
+    int roundupAmount = subtotalRounded - (totalAmount + cgstAmount + sgstAmount);
+
+    int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
 
     // Amount
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Amount', footerLabel());
     final int amountExcel = fRow + 1;
-    setInt(7, fRow, totalAmount, footerValue());  // ✅ Show calculated value directly
+    setInt(7, fRow, totalAmount, footerValue());
     fRow++;
 
     // CGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'CGST 9%', footerLabel());
     final int cgstExcel = fRow + 1;
-    setInt(7, fRow, cgstAmount, footerValue());  // ✅ Show calculated value directly
+    setInt(7, fRow, cgstAmount, footerValue());
     fRow++;
 
     // SGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'SGST 9%', footerLabel());
     final int sgstExcel = fRow + 1;
-    setInt(7, fRow, sgstAmount, footerValue());  // ✅ Show calculated value directly
+    setInt(7, fRow, sgstAmount, footerValue());
     fRow++;
 
     // Roundup
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Roundup', footerLabel());
     final int roundupExcel = fRow + 1;
-    setInt(7, fRow, roundupAmount, footerValue());  // ✅ Show calculated value directly
+    setInt(7, fRow, roundupAmount, footerValue());
     fRow++;
 
-    // Total Amount
+    // Total Amount - With special styling
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Total Amount',
         xl.CellStyle(
           fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
           bold: true,
-          fontSize: 11,
+          fontSize: 12,
           horizontalAlign: xl.HorizontalAlign.Right,
           verticalAlign: xl.VerticalAlign.Center,
         ));
-    setInt(7, fRow, totalFinal, footerValue());  // ✅ Show calculated value directly
+    setInt(7, fRow, totalFinal, footerValueBold());
     fRow += 2;
 
     // Yours Truly
-    setText(7, fRow, 'Yours Truly,', plain(align: xl.HorizontalAlign.Right));
+    setText(7, fRow, 'Yours Truly,', signatureStyle());
     fRow++;
-    setText(7, fRow, 'For Jogsingh A. Rajpurohit', plain(align: xl.HorizontalAlign.Right));
-    fRow += 4;
-    setText(7, fRow, 'Authorised Sign.', plain(align: xl.HorizontalAlign.Right));
+
+    // For Jogsingh A. Rajpurohit with bottom border
+    final lastRow = fRow;
+    final lastSignatureStyle = xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+    );
+    setText(7, lastRow, 'For Jogsingh A. Rajpurohit', lastSignatureStyle);
+    fRow += 2;
 
     // ── Save and open ─────────────────────────────────────────────────────
     try {
