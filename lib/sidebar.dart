@@ -5,15 +5,11 @@ import 'package:rajpurohit/previous_data.dart';
 import 'package:rajpurohit/settings.dart';
 import 'package:rajpurohit/manual_pod_entry.dart';
 import 'package:rajpurohit/PreviousManualPodData.dart';
+import 'package:rajpurohit/page_state_manager.dart';
 import 'Homepage.dart';
 
-// Global variable to track current page
-int currentSelectedPage = 0;
-
 class sidebar extends StatefulWidget {
-  final int selectedIndex;
-
-  const sidebar({super.key, this.selectedIndex = 0});
+  const sidebar({super.key});
 
   @override
   State<sidebar> createState() => _sidebarState();
@@ -28,9 +24,15 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    // ✅ ALWAYS update global state from widget parameter
-    currentSelectedPage = widget.selectedIndex;
+    // Listen to page state changes
+    pageManager.addListener(_onPageChanged);
     setupAnimations();
+  }
+
+  void _onPageChanged() {
+    setState(() {
+      // Rebuild when page state changes
+    });
   }
 
   void setupAnimations() {
@@ -57,6 +59,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    pageManager.removeListener(_onPageChanged);
     _fadeController.dispose();
     _slideController.dispose();
     super.dispose();
@@ -227,8 +230,8 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                               if (credentials.containsKey(enteredUsername) &&
                                   credentials[enteredUsername] == enteredPassword) {
                                 Navigator.pop(context);
-                                currentSelectedPage = 5;
-                                Navigator.push(
+                                pageManager.setCurrentPage(5);
+                                Navigator.pushReplacement(
                                   context,
                                   MaterialPageRoute(builder: (_) => const settings()),
                                 );
@@ -272,9 +275,9 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
   }
 
   void _navigateTo(Widget page, int index) {
-    currentSelectedPage = index; // ✅ Update global state
+    pageManager.setCurrentPage(index);
     Navigator.pop(context);
-    Navigator.push(
+    Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => page),
     );
@@ -286,8 +289,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
     required String title,
     required Widget page,
   }) {
-    // ✅ Use global state, not local
-    final isSelected = currentSelectedPage == index;
+    final isSelected = pageManager.currentPage == index;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

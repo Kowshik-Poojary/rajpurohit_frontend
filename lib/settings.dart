@@ -151,7 +151,7 @@ class _settingsState extends State<settings> with TickerProviderStateMixin {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      drawer: sidebar(selectedIndex: 5),
+      drawer: sidebar(),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
