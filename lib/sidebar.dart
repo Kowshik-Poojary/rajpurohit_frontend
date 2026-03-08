@@ -24,12 +24,11 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
   late AnimationController _slideController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late int _selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.selectedIndex;
+    // ✅ ALWAYS update global state from widget parameter
     currentSelectedPage = widget.selectedIndex;
     setupAnimations();
   }
@@ -228,10 +227,10 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                               if (credentials.containsKey(enteredUsername) &&
                                   credentials[enteredUsername] == enteredPassword) {
                                 Navigator.pop(context);
-                                currentSelectedPage = 5; // Settings index
+                                currentSelectedPage = 5;
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => settings()),
+                                  MaterialPageRoute(builder: (_) => const settings()),
                                 );
                               } else {
                                 Navigator.pop(context);
@@ -273,16 +272,11 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
   }
 
   void _navigateTo(Widget page, int index) {
-    currentSelectedPage = index;
-    Navigator.pop(context); // Close drawer
+    currentSelectedPage = index; // ✅ Update global state
+    Navigator.pop(context);
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          drawer: sidebar(selectedIndex: index),
-          body: page,
-        ),
-      ),
+      MaterialPageRoute(builder: (_) => page),
     );
   }
 
@@ -292,7 +286,9 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
     required String title,
     required Widget page,
   }) {
-    final isSelected = _selectedIndex == index;
+    // ✅ Use global state, not local
+    final isSelected = currentSelectedPage == index;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: Material(
@@ -380,7 +376,6 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                // Header
                 Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -453,10 +448,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Navigation Items
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
                   child: Column(
@@ -494,14 +486,10 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                     ],
                   ),
                 ),
-
-                // Divider
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   child: Divider(color: Colors.grey.shade300),
                 ),
-
-                // Settings Section
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Material(
@@ -568,10 +556,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
-                // Footer
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
