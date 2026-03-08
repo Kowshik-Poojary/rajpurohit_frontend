@@ -30,7 +30,6 @@ class _loginState extends State<login> with TickerProviderStateMixin {
   void initState() {
     super.initState();
 
-    // Fade Animation
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -39,7 +38,6 @@ class _loginState extends State<login> with TickerProviderStateMixin {
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
 
-    // Slide Animation
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -49,7 +47,6 @@ class _loginState extends State<login> with TickerProviderStateMixin {
       CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
     );
 
-    // Scale Animation
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -141,7 +138,7 @@ class _loginState extends State<login> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    final shakeAnimation = Tween<double>(begin: 0, end: 10)
+    Tween<double>(begin: 0, end: 10)
         .chain(CurveTween(curve: Curves.elasticInOut))
         .animate(shakeController);
 
@@ -218,7 +215,7 @@ class _loginState extends State<login> with TickerProviderStateMixin {
         ),
         child: Stack(
           children: [
-            // Animated Background Circles
+            // Background circles
             Positioned(
               top: -50,
               right: -50,
@@ -260,33 +257,22 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Logo/App Name
+                        // Logo + App Name
                         ScaleTransition(
                           scale: _scaleAnimation,
                           child: Column(
                             children: [
-                              Container(
-                                width: 80,
-                                height: 80,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  gradient: const LinearGradient(
-                                    colors: [Colors.cyan, Colors.blue],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.blue.withOpacity(0.4),
-                                      blurRadius: 20,
-                                      spreadRadius: 5,
-                                    )
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.local_shipping,
+                              // Logo in white circle — same style as sidebar & homepage
+                              ClipOval(
+                                child: Container(
                                   color: Colors.white,
-                                  size: 45,
+                                  width: 90,
+                                  height: 90,
+                                  padding: const EdgeInsets.all(8),
+                                  child: Image.asset(
+                                    'assets/images/logo1.png',
+                                    fit: BoxFit.contain,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -363,26 +349,15 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                                   ),
                                   decoration: InputDecoration(
                                     labelText: 'Username',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.grey,
-                                    ),
-                                    prefixIcon: const Icon(
-                                      Icons.person,
-                                      color: Color(0xff2a3368),
-                                    ),
+                                    labelStyle: const TextStyle(color: Colors.grey),
+                                    prefixIcon: const Icon(Icons.person, color: Color(0xff2a3368)),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: Colors.grey,
-                                        width: 1.5,
-                                      ),
+                                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xff2a3368),
-                                        width: 2,
-                                      ),
+                                      borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
                                     ),
                                     filled: true,
                                     fillColor: Colors.grey.withOpacity(0.1),
@@ -401,13 +376,8 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                                   ),
                                   decoration: InputDecoration(
                                     labelText: 'Password',
-                                    labelStyle: const TextStyle(
-                                      color: Colors.grey,
-                                    ),
-                                    prefixIcon: const Icon(
-                                      Icons.lock,
-                                      color: Color(0xff2a3368),
-                                    ),
+                                    labelStyle: const TextStyle(color: Colors.grey),
+                                    prefixIcon: const Icon(Icons.lock, color: Color(0xff2a3368)),
                                     suffixIcon: GestureDetector(
                                       onTap: () {
                                         setState(() {
@@ -415,25 +385,17 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                                         });
                                       },
                                       child: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_off
-                                            : Icons.visibility,
-                                        color: Color(0xff2a3368),
+                                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                                        color: const Color(0xff2a3368),
                                       ),
                                     ),
                                     enabledBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: Colors.grey,
-                                        width: 1.5,
-                                      ),
+                                      borderSide: const BorderSide(color: Colors.grey, width: 1.5),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(15),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xff2a3368),
-                                        width: 2,
-                                      ),
+                                      borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
                                     ),
                                     filled: true,
                                     fillColor: Colors.grey.withOpacity(0.1),
@@ -455,8 +417,7 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                                     borderRadius: BorderRadius.circular(15),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: const Color(0xff2a3368)
-                                            .withOpacity(0.3),
+                                        color: const Color(0xff2a3368).withOpacity(0.3),
                                         blurRadius: 15,
                                         spreadRadius: 2,
                                       )
@@ -473,10 +434,7 @@ class _loginState extends State<login> with TickerProviderStateMixin {
                                           width: 25,
                                           height: 25,
                                           child: CircularProgressIndicator(
-                                            valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white,
-                                            ),
+                                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                             strokeWidth: 2.5,
                                           ),
                                         )
@@ -500,11 +458,11 @@ class _loginState extends State<login> with TickerProviderStateMixin {
 
                         const SizedBox(height: 30),
 
-                        // Footer Text
+                        // Footer
                         FadeTransition(
                           opacity: _fadeAnimation,
                           child: const Text(
-                            '© 2024 Rajpurohit. All rights reserved.',
+                            '© 2026 Rajpurohit. All rights reserved.',
                             style: TextStyle(
                               color: Colors.white54,
                               fontSize: 12,

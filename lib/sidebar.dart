@@ -599,7 +599,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              '1.0.0 • 2024',
+                              '2.0.0 • 2026',
                               style: TextStyle(
                                 fontSize: 10,
                                 color: Colors.grey.shade500,
@@ -610,7 +610,7 @@ class _sidebarState extends State<sidebar> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        '© 2024 Rajpurohit OTC Service\nAll rights reserved',
+                        '© 2026 Rajpurohit OTC Service\nAll rights reserved',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 9,

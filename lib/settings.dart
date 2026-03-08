@@ -4,6 +4,7 @@ import 'sidebar.dart';
 import 'change_address.dart';
 import 'sender.dart';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
+import 'logindialog.dart';
 
 class settings extends StatefulWidget {
   const settings({super.key});
@@ -51,6 +52,31 @@ class _settingsState extends State<settings> with TickerProviderStateMixin {
     _fadeController.dispose();
     _slideController.dispose();
     super.dispose();
+  }
+
+  // Function to show the improved login dialog with better proportions
+  void _showLoginDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoginDialog(
+        title: 'Welcome Back',
+        subtitle: 'Sign in to your account',
+        onLogin: (username, password) {
+          // Handle login logic here
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Logged in as: $username'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              margin: const EdgeInsets.all(16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Widget _buildSettingCard({
@@ -293,7 +319,7 @@ class _settingsState extends State<settings> with TickerProviderStateMixin {
                             Padding(
                               padding: const EdgeInsets.only(left: 32),
                               child: Text(
-                                '1.0.0 • 2024',
+                                '2.0.0 • 2026',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: Colors.grey.shade600,
@@ -313,7 +339,7 @@ class _settingsState extends State<settings> with TickerProviderStateMixin {
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
-                                    '© 2024 Rajpurohit OTC Service',
+                                    '© 2026 Rajpurohit OTC Service',
                                     style: TextStyle(
                                       fontSize: 13,
                                       color: Colors.grey.shade600,
