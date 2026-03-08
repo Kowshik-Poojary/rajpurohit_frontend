@@ -139,7 +139,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     }
   }
 
-  /// ✅ Get proper save directory based on platform
   Future<String> _getSaveDirectory() async {
     if (Platform.isWindows) {
       final String? downloadsPath =
@@ -164,9 +163,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     }
   }
 
-  // ─── Invoice Excel Export ────────────────────────────────────────────────
-
-  /// Prompts user to enter the "To" address, then exports the invoice.
   Future<void> _promptAndExport() async {
     final toAddressController = TextEditingController();
 
@@ -218,15 +214,11 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     }
   }
 
-  /// ✅ FIXED: Use proper CellValue wrappers, correct method names, and proper color handling
   Future<void> _exportInvoiceToExcel({required String toAddress}) async {
     final excelFile = xl.Excel.createExcel();
     excelFile.delete('Sheet1');
     final xl.Sheet sheet = excelFile['Invoice'];
 
-    // ── Column widths (A–H = indices 0–7) ────────────────────────────────
-    // ✅ FIXED: Use correct method for setting column widths
-    // Note: The exact method may vary - if this doesn't work, check your excel package docs
     try {
       sheet.setColumnWidth(0, 6.3);
       sheet.setColumnWidth(1, 12.4);
@@ -238,10 +230,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       sheet.setColumnWidth(7, 9.4);
     } catch (e) {
       print('Warning: Could not set column widths: $e');
-      // Column widths are optional, so don't fail if this doesn't work
     }
 
-    // ── Style helpers ─────────────────────────────────────────────────────
     xl.CellStyle companyHeader({int size = 14}) => xl.CellStyle(
       fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
       bold: true,
@@ -391,7 +381,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
-    // Shorthand helpers — old API sets value directly (String or int)
     void setText(int col, int row, String value, xl.CellStyle style) {
       final cell = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: row));
       cell.value = xl.TextCellValue(value);
@@ -411,7 +400,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       );
     }
 
-    // ── Rows 0–4: Company header (merged A:H) ─────────────────────────────
     final List<Map<String, dynamic>> headerLines = [
       {'text': 'JOGSINGH A. RAJPUROHIT', 'bold': true, 'size': 16},
       {'text': 'OTC SERVICE DAILY – MUMBAI TO C. Sambhajinagar-AHAMAD NAGAR - Pune', 'bold': true, 'size': 12},
@@ -430,33 +418,28 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       }
     }
 
-    // ── Row 5: Bill Details ───────────────────────────────────────────────
     mergeRange(0, 5, 1, 5);
     setText(0, 5, 'To, ', plain());
 
     mergeRange(6, 5, 7, 5);
     setText(6, 5, 'BILL NO. :', plain());
 
-    // ── Rows 6–9: "To" address lines (left) + Date (right on row 6) ───────
     final List<String> toLines = toAddress.split('\n');
     for (int i = 0; i < 4; i++) {
       mergeRange(0, 6 + i, 5, 6 + i);
       setText(0, 6 + i, i < toLines.length ? toLines[i] : '', plain(bold: i == 0));
     }
 
-    // Date auto-filled on row 6 right side
     final String today = DateFormat('dd/MM/yyyy').format(DateTime.now());
     mergeRange(6, 6, 7, 6);
     setText(6, 6, 'Date: $today', plain(bold: true, align: xl.HorizontalAlign.Right));
 
-    // ── Row 10: Table column headers ──────────────────────────────────────
     const int headerRowIdx = 10;
     const List<String> cols = ['Sr. No.', 'Date', 'POD No.', 'From', 'To', 'Weight', 'BAG', 'Amount'];
     for (int c = 0; c < cols.length; c++) {
       setText(c, headerRowIdx, cols[c], tableHeader());
     }
 
-    // ── Data rows (index 11 onwards) ─────────────────────────────────────
     const int dataStartIdx = 11;
     for (int i = 0; i < filteredList.length; i++) {
       final PodData pod = filteredList[i];
@@ -472,60 +455,46 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       setInt(7, r, int.tryParse(pod.amount) ?? 0, dataCell());
     }
 
-    // ── Footer ────────────────────────────────────────────────────────────
     final int dataEndIdx = dataStartIdx + filteredList.length - 1;
     int fRow = dataEndIdx + 1;
 
-    // Calculate totals from data
     int totalAmount = 0;
     for (var pod in filteredList) {
       totalAmount += int.tryParse(pod.amount) ?? 0;
     }
 
-    // ✅ FIXED: Proper decimal rounding (105.48 -> 106, 105.50 -> 106)
     double cgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
     double sgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
 
-    // Round up to nearest integer
     int cgstAmount = cgstAmountDouble.ceil();
     int sgstAmount = sgstAmountDouble.ceil();
 
-    // Calculate roundup with proper rounding
     double subtotalDouble = totalAmount.toDouble() + cgstAmount.toDouble() + sgstAmount.toDouble();
     int subtotalRounded = subtotalDouble.ceil();
     int roundupAmount = subtotalRounded - (totalAmount + cgstAmount + sgstAmount);
 
     int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
 
-    // Amount
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Amount', footerLabel());
-    final int amountExcel = fRow + 1;
     setInt(7, fRow, totalAmount, footerValue());
     fRow++;
 
-    // CGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'CGST 9%', footerLabel());
-    final int cgstExcel = fRow + 1;
     setInt(7, fRow, cgstAmount, footerValue());
     fRow++;
 
-    // SGST 9%
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'SGST 9%', footerLabel());
-    final int sgstExcel = fRow + 1;
     setInt(7, fRow, sgstAmount, footerValue());
     fRow++;
 
-    // Roundup
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Roundup', footerLabel());
-    final int roundupExcel = fRow + 1;
     setInt(7, fRow, roundupAmount, footerValue());
     fRow++;
 
-    // Total Amount - With special styling
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Total Amount',
         xl.CellStyle(
@@ -538,11 +507,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     setInt(7, fRow, totalFinal, footerValueBold());
     fRow += 2;
 
-    // Yours Truly
     setText(7, fRow, 'Yours Truly,', signatureStyle());
     fRow++;
 
-    // For Jogsingh A. Rajpurohit with bottom border
     final lastRow = fRow;
     final lastSignatureStyle = xl.CellStyle(
       fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
@@ -556,13 +523,11 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     setText(7, lastRow, 'For Jogsingh A. Rajpurohit', lastSignatureStyle);
     fRow += 2;
 
-    // ── Save and open ─────────────────────────────────────────────────────
     try {
       final String saveDir = await _getSaveDirectory();
       final String dateStamp = DateFormat('dd-MM-yyyy_HHmmss').format(DateTime.now());
       final String fileName = 'invoice_$dateStamp.xlsx';
 
-      // Create directory if it doesn't exist
       final directory = Directory(saveDir);
       if (!await directory.exists()) {
         await directory.create(recursive: true);
@@ -578,12 +543,10 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
       _showSuccessSnackbar('Invoice saved to:\n$filePath\n\nOpening Excel...');
 
-      // Wait a moment to ensure file is fully written
       await Future.delayed(const Duration(milliseconds: 1000));
 
       bool fileOpened = false;
 
-      // Try to open the file with retry logic
       for (int attempt = 0; attempt < 3; attempt++) {
         try {
           final result = await OpenFile.open(filePath);
@@ -595,7 +558,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             break;
           } else {
             print('⚠️ Attempt ${attempt + 1}: Could not open (${result.type})');
-            // Check if message indicates no app found
             if (result.message.toLowerCase().contains('no app found') ||
                 result.message.isEmpty ||
                 result.message.toLowerCase().contains('error')) {
@@ -610,7 +572,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             }
           }
 
-          // Wait before retry
           if (attempt < 2) {
             await Future.delayed(const Duration(milliseconds: 500));
           }
@@ -659,8 +620,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
-
-  // ─── PDF Generation ───────────────────────────────────────────────────────
 
   Future<String> _fetchAddress() async {
     try {
@@ -927,7 +886,41 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-  // ─── Table ────────────────────────────────────────────────────────────────
+  // Improved Search Field Widget
+  Widget buildSearchField({
+    required TextEditingController controller,
+    required String label,
+    required VoidCallback onChanged,
+  }) {
+    return SizedBox(
+      width: 160,
+      child: TextField(
+        controller: controller,
+        onChanged: (_) => onChanged(),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Color(0xff2a3368), fontSize: 12),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+          ),
+          prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey.shade600),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+        ),
+        style: TextStyle(fontSize: 13),
+      ),
+    );
+  }
 
   Widget buildTable() {
     return SingleChildScrollView(
@@ -935,11 +928,22 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       child: DataTable(
         headingRowColor:
         MaterialStateColor.resolveWith((states) => const Color(0xff2a3368)),
-        headingTextStyle:
-        const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        headingTextStyle: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
         dataRowColor:
-        MaterialStateColor.resolveWith((states) => Colors.grey.shade100),
-        columnSpacing: 20,
+        MaterialStateColor.resolveWith((states) => Colors.white),
+        columnSpacing: 16,
+        horizontalMargin: 12,
+        dataRowHeight: 56,
+        headingRowHeight: 56,
+        dividerThickness: 1,
+        border: TableBorder(
+          horizontalInside: BorderSide(color: Colors.grey.shade200, width: 0.5),
+          bottom: BorderSide(color: Colors.grey.shade200, width: 0.5),
+        ),
         columns: const [
           DataColumn(label: Text('POD No.')),
           DataColumn(label: Text('Date')),
@@ -954,66 +958,113 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
           DataColumn(label: Text('Amount')),
           DataColumn(label: Text('Status')),
           DataColumn(label: Text('Sender')),
-          DataColumn(label: Text('Print POD')),
+          DataColumn(label: Text('Print')),
         ],
         rows: filteredList.map((pod) {
-          return DataRow(cells: [
-            DataCell(Text("POD-${pod.podNumber}")),
-            DataCell(Text(pod.formattedDate)),
-            DataCell(Text(pod.from)),
-            DataCell(Text(pod.to)),
-            DataCell(Text(pod.origin)),
-            DataCell(Text(pod.destination)),
-            DataCell(Text(pod.doc)),
-            DataCell(Text(pod.weight)),
-            DataCell(Row(children: [
-              Text(pod.volWeight),
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-                tooltip: 'Edit Vol Weight',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditVolWeightManualPage(
-                        podId: pod.podNumber,
-                        currentVolWeight: pod.volWeight,
-                        weight: int.parse(pod.weight),
+          return DataRow(
+            color: MaterialStateColor.resolveWith((states) {
+              if (states.contains(MaterialState.hovered)) {
+                return Colors.grey.shade50;
+              }
+              return Colors.white;
+            }),
+            cells: [
+              DataCell(Text("POD-${pod.podNumber}", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+              DataCell(Text(pod.formattedDate, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.from, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.to, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.origin, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.destination, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.doc, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.weight, style: TextStyle(fontSize: 12))),
+              DataCell(
+                Row(
+                  children: [
+                    Text(pod.volWeight, style: TextStyle(fontSize: 12)),
+                    SizedBox(width: 4),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
+                        tooltip: 'Edit Vol Weight',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditVolWeightManualPage(
+                                podId: pod.podNumber,
+                                currentVolWeight: pod.volWeight,
+                                weight: int.parse(pod.weight),
+                              ),
+                            ),
+                          ).then((_) => fetchManualPods());
+                        },
                       ),
                     ),
-                  ).then((_) => fetchManualPods());
-                },
+                  ],
+                ),
               ),
-            ])),
-            DataCell(Text(pod.pieces)),
-            DataCell(Text(pod.amount)),
-            DataCell(Row(children: [
-              Text(pod.status),
-              IconButton(
-                icon: const Icon(Icons.edit, color: Colors.purple, size: 20),
-                tooltip: 'Edit Payment Status',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditPaymentStatusManualPage(
-                        podId: pod.podNumber,
-                        currentStatus: pod.status,
+              DataCell(Text(pod.pieces, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.amount, style: TextStyle(fontSize: 12))),
+              DataCell(
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: pod.status == 'Paid' ? Colors.green.shade100 : Colors.orange.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        pod.status,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: pod.status == 'Paid' ? Colors.green.shade700 : Colors.orange.shade700,
+                        ),
                       ),
                     ),
-                  ).then((_) => fetchManualPods());
-                },
+                    SizedBox(width: 4),
+                    SizedBox(
+                      width: 32,
+                      height: 32,
+                      child: IconButton(
+                        padding: EdgeInsets.zero,
+                        icon: Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
+                        tooltip: 'Edit Payment Status',
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditPaymentStatusManualPage(
+                                podId: pod.podNumber,
+                                currentStatus: pod.status,
+                              ),
+                            ),
+                          ).then((_) => fetchManualPods());
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ])),
-            DataCell(Text(pod.sender)),
-            DataCell(
-              IconButton(
-                icon: const Icon(Icons.print, color: Color(0xff2a3368)),
-                tooltip: 'Print POD',
-                onPressed: () => _printPod(context, pod),
+              DataCell(Text(pod.sender, style: TextStyle(fontSize: 12))),
+              DataCell(
+                SizedBox(
+                  width: 32,
+                  height: 32,
+                  child: IconButton(
+                    padding: EdgeInsets.zero,
+                    icon: Icon(Icons.print_outlined, color: Color(0xff2a3368), size: 18),
+                    tooltip: 'Print POD',
+                    onPressed: () => _printPod(context, pod),
+                  ),
+                ),
               ),
-            ),
-          ]);
+            ],
+          );
         }).toList(),
       ),
     );
@@ -1025,137 +1076,173 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       appBar: AppBar(
         backgroundColor: const Color(0xff2a3368),
         title: const Text('Previous Manual POD Data',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 2,
       ),
       drawer: sidebar(),
       body: isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: Color(0xff2a3368)))
           : podList.isEmpty
-          ? const Center(child: Text("No manual POD records found."))
+          ? const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.inbox, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text("No manual POD records found.", style: TextStyle(fontSize: 16, color: Colors.grey)),
+          ],
+        ),
+      )
           : Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Center(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
           child: Column(
             children: [
-              SizedBox(
-                width: 150,
-                child: TextField(
-                  controller: idController,
-                  onChanged: (_) => filterTable(),
-                  decoration: const InputDecoration(
-                    labelText: 'Search by POD No.',
-                    border: OutlineInputBorder(),
+              // Filter Cards
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                color: Colors.white,
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Search & Filter',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xff2a3368)),
+                      ),
+                      SizedBox(height: 16),
+
+                      // POD No. Search
+                      buildSearchField(
+                        controller: idController,
+                        label: 'Search by POD No.',
+                        onChanged: filterTable,
+                      ),
+                      SizedBox(height: 12),
+
+                      // Origin & Destination
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          buildSearchField(
+                            controller: originController,
+                            label: 'Origin',
+                            onChanged: filterTable,
+                          ),
+                          SizedBox(width: 12),
+                          buildSearchField(
+                            controller: destinationController,
+                            label: 'Destination',
+                            onChanged: filterTable,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+
+                      // From & To
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          buildSearchField(
+                            controller: fromController,
+                            label: 'From',
+                            onChanged: filterTable,
+                          ),
+                          SizedBox(width: 12),
+                          buildSearchField(
+                            controller: toController,
+                            label: 'To',
+                            onChanged: filterTable,
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+
+                      // Status & Date Filters
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey.shade300),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: DropdownButton<String>(
+                              value: selectedStatus ?? 'All',
+                              underline: SizedBox(),
+                              items: ['All', 'Paid', 'Unpaid']
+                                  .map((status) => DropdownMenuItem(
+                                value: status,
+                                child: Text(status, style: TextStyle(fontSize: 13)),
+                              ))
+                                  .toList(),
+                              onChanged: (value) {
+                                setState(() => selectedStatus = value);
+                                filterTable();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => pickDateRange(context),
+                            icon: const Icon(Icons.date_range, size: 18),
+                            label: const Text('Filter by Date'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xff2a3368),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: _promptAndExport,
+                            icon: const Icon(Icons.file_download, size: 18),
+                            label: const Text('Export Invoice'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green.shade600,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 150,
-                    child: TextField(
-                      controller: originController,
-                      onChanged: (_) => filterTable(),
-                      decoration: const InputDecoration(
-                        labelText: 'Search Origin',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  SizedBox(
-                    width: 150,
-                    child: TextField(
-                      controller: destinationController,
-                      onChanged: (_) => filterTable(),
-                      decoration: const InputDecoration(
-                        labelText: 'Search Destination',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 150,
-                    child: TextField(
-                      controller: fromController,
-                      onChanged: (_) => filterTable(),
-                      decoration: const InputDecoration(
-                        labelText: 'Search From',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  SizedBox(
-                    width: 150,
-                    child: TextField(
-                      controller: toController,
-                      onChanged: (_) => filterTable(),
-                      decoration: const InputDecoration(
-                        labelText: 'Search To',
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  DropdownButton<String>(
-                    value: selectedStatus ?? 'All',
-                    items: ['All', 'Paid', 'Unpaid']
-                        .map((status) => DropdownMenuItem(
-                      child: Text(status),
-                      value: status,
-                    ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() => selectedStatus = value);
-                      filterTable();
-                    },
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: () => pickDateRange(context),
-                    icon: const Icon(Icons.date_range),
-                    label: const Text('Filter by Date'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xff2a3368),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: _promptAndExport,
-                icon: const Icon(Icons.file_download),
-                label: const Text('Export Invoice to Excel'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xff2a3368),
-                  foregroundColor: Colors.white,
+              SizedBox(height: 20),
+
+              // Records Count
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Records: ${filteredList.length}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
                 ),
               ),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Scrollbar(
-                  controller: _verticalScrollController,
-                  thumbVisibility: true,
-                  thickness: 8,
-                  child: SingleChildScrollView(
+              SizedBox(height: 8),
+
+              // Table
+              Card(
+                elevation: 1,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Scrollbar(
                     controller: _verticalScrollController,
-                    scrollDirection: Axis.vertical,
-                    child: buildTable(),
+                    thumbVisibility: true,
+                    thickness: 8,
+                    child: SingleChildScrollView(
+                      controller: _verticalScrollController,
+                      scrollDirection: Axis.vertical,
+                      child: buildTable(),
+                    ),
                   ),
                 ),
               ),
