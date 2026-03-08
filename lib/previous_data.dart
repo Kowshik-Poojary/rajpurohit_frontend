@@ -187,8 +187,7 @@ class _previous_dataState extends State<previous_data> {
     required String label,
     required VoidCallback onChanged,
   }) {
-    return SizedBox(
-      width: 160,
+    return Flexible(
       child: TextField(
         controller: controller,
         onChanged: (_) => onChanged(),
@@ -386,6 +385,7 @@ class _previous_dataState extends State<previous_data> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -404,7 +404,6 @@ class _previous_dataState extends State<previous_data> {
 
                       // Origin & Destination
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           buildSearchField(
                             controller: originController,
@@ -423,7 +422,6 @@ class _previous_dataState extends State<previous_data> {
 
                       // From & To
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           buildSearchField(
                             controller: fromController,
@@ -441,66 +439,68 @@ class _previous_dataState extends State<previous_data> {
                       SizedBox(height: 12),
 
                       // Status & Date Filters
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButton<String>(
+                                value: selectedStatus ?? 'All',
+                                underline: SizedBox(),
+                                items: ['All', 'Paid', 'Unpaid']
+                                    .map((status) => DropdownMenuItem(
+                                  value: status,
+                                  child: Text(status, style: TextStyle(fontSize: 13)),
+                                ))
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() {
+                                    selectedStatus = value;
+                                  });
+                                  filterTable();
+                                },
+                              ),
                             ),
-                            child: DropdownButton<String>(
-                              value: selectedStatus ?? 'All',
-                              underline: SizedBox(),
-                              items: ['All', 'Paid', 'Unpaid']
-                                  .map((status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status, style: TextStyle(fontSize: 13)),
-                              ))
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  selectedStatus = value;
-                                });
-                                filterTable();
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => pickDateRange(context),
+                              icon: const Icon(Icons.date_range, size: 18),
+                              label: const Text('Filter by Date'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xff2a3368),
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                bool granted = await requestStoragePermission();
+                                if (!granted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Storage permission is required.')),
+                                  );
+                                  return;
+                                }
+                                await exportFilteredToExcel();
                               },
+                              icon: const Icon(Icons.download, size: 18),
+                              label: const Text("Export to Excel"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () => pickDateRange(context),
-                            icon: const Icon(Icons.date_range, size: 18),
-                            label: const Text('Filter by Date'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xff2a3368),
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              bool granted = await requestStoragePermission();
-                              if (!granted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Storage permission is required.')),
-                                );
-                                return;
-                              }
-                              await exportFilteredToExcel();
-                            },
-                            icon: const Icon(Icons.download, size: 18),
-                            label: const Text("Export to Excel"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade600,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),

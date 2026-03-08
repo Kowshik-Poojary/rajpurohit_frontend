@@ -38,6 +38,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
   TextEditingController toController = TextEditingController();
   TextEditingController idController = TextEditingController();
   final ScrollController _verticalScrollController = ScrollController();
+  final ScrollController _horizontalScrollController = ScrollController();
   DateTime? startDate;
   DateTime? endDate;
   String? selectedStatus;
@@ -51,6 +52,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
   @override
   void dispose() {
     _verticalScrollController.dispose();
+    _horizontalScrollController.dispose();
     originController.dispose();
     destinationController.dispose();
     fromController.dispose();
@@ -892,15 +894,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     required String label,
     required VoidCallback onChanged,
   }) {
-    return SizedBox(
-      width: 160,
+    return Flexible(
       child: TextField(
         controller: controller,
         onChanged: (_) => onChanged(),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(color: Color(0xff2a3368), fontSize: 12),
-          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          labelStyle: const TextStyle(color: Color(0xff2a3368), fontSize: 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -911,13 +912,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+            borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
           ),
           prefixIcon: Icon(Icons.search, size: 18, color: Colors.grey.shade600),
           filled: true,
           fillColor: Colors.grey.shade50,
         ),
-        style: TextStyle(fontSize: 13),
+        style: const TextStyle(fontSize: 13),
       ),
     );
   }
@@ -925,6 +926,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
   Widget buildTable() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
+      controller: _horizontalScrollController,
       child: DataTable(
         headingRowColor:
         MaterialStateColor.resolveWith((states) => const Color(0xff2a3368)),
@@ -969,25 +971,25 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               return Colors.white;
             }),
             cells: [
-              DataCell(Text("POD-${pod.podNumber}", style: TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
-              DataCell(Text(pod.formattedDate, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.from, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.to, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.origin, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.destination, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.doc, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.weight, style: TextStyle(fontSize: 12))),
+              DataCell(Text("POD-${pod.podNumber}", style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+              DataCell(Text(pod.formattedDate, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.from, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.to, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.origin, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.destination, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.doc, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.weight, style: const TextStyle(fontSize: 12))),
               DataCell(
                 Row(
                   children: [
-                    Text(pod.volWeight, style: TextStyle(fontSize: 12)),
-                    SizedBox(width: 4),
+                    Text(pod.volWeight, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
                     SizedBox(
                       width: 32,
                       height: 32,
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        icon: Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
+                        icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
                         tooltip: 'Edit Vol Weight',
                         onPressed: () {
                           Navigator.push(
@@ -1006,13 +1008,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                   ],
                 ),
               ),
-              DataCell(Text(pod.pieces, style: TextStyle(fontSize: 12))),
-              DataCell(Text(pod.amount, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.pieces, style: const TextStyle(fontSize: 12))),
+              DataCell(Text(pod.amount, style: const TextStyle(fontSize: 12))),
               DataCell(
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: pod.status == 'Paid' ? Colors.green.shade100 : Colors.orange.shade100,
                         borderRadius: BorderRadius.circular(12),
@@ -1026,13 +1028,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         ),
                       ),
                     ),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 4),
                     SizedBox(
                       width: 32,
                       height: 32,
                       child: IconButton(
                         padding: EdgeInsets.zero,
-                        icon: Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
+                        icon: const Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
                         tooltip: 'Edit Payment Status',
                         onPressed: () {
                           Navigator.push(
@@ -1050,14 +1052,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                   ],
                 ),
               ),
-              DataCell(Text(pod.sender, style: TextStyle(fontSize: 12))),
+              DataCell(Text(pod.sender, style: const TextStyle(fontSize: 12))),
               DataCell(
                 SizedBox(
                   width: 32,
                   height: 32,
                   child: IconButton(
                     padding: EdgeInsets.zero,
-                    icon: Icon(Icons.print_outlined, color: Color(0xff2a3368), size: 18),
+                    icon: const Icon(Icons.print_outlined, color: Color(0xff2a3368), size: 18),
                     tooltip: 'Print POD',
                     onPressed: () => _printPod(context, pod),
                   ),
@@ -1107,13 +1109,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Search & Filter',
                         style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xff2a3368)),
                       ),
-                      SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
                       // POD No. Search
                       buildSearchField(
@@ -1121,18 +1124,17 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         label: 'Search by POD No.',
                         onChanged: filterTable,
                       ),
-                      SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
                       // Origin & Destination
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           buildSearchField(
                             controller: originController,
                             label: 'Origin',
                             onChanged: filterTable,
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           buildSearchField(
                             controller: destinationController,
                             label: 'Destination',
@@ -1140,18 +1142,17 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
                       // From & To
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           buildSearchField(
                             controller: fromController,
                             label: 'From',
                             onChanged: filterTable,
                           ),
-                          SizedBox(width: 12),
+                          const SizedBox(width: 12),
                           buildSearchField(
                             controller: toController,
                             label: 'To',
@@ -1159,64 +1160,66 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                           ),
                         ],
                       ),
-                      SizedBox(height: 12),
+                      const SizedBox(height: 12),
 
-                      // Status & Date Filters
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(8),
+                      // Status & Date Filters - Properly wrapped
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey.shade300),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButton<String>(
+                                value: selectedStatus ?? 'All',
+                                underline: const SizedBox(),
+                                items: ['All', 'Paid', 'Unpaid']
+                                    .map((status) => DropdownMenuItem(
+                                  value: status,
+                                  child: Text(status, style: const TextStyle(fontSize: 13)),
+                                ))
+                                    .toList(),
+                                onChanged: (value) {
+                                  setState(() => selectedStatus = value);
+                                  filterTable();
+                                },
+                              ),
                             ),
-                            child: DropdownButton<String>(
-                              value: selectedStatus ?? 'All',
-                              underline: SizedBox(),
-                              items: ['All', 'Paid', 'Unpaid']
-                                  .map((status) => DropdownMenuItem(
-                                value: status,
-                                child: Text(status, style: TextStyle(fontSize: 13)),
-                              ))
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() => selectedStatus = value);
-                                filterTable();
-                              },
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () => pickDateRange(context),
+                              icon: const Icon(Icons.date_range, size: 18),
+                              label: const Text('Filter by Date'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xff2a3368),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: () => pickDateRange(context),
-                            icon: const Icon(Icons.date_range, size: 18),
-                            label: const Text('Filter by Date'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xff2a3368),
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: _promptAndExport,
+                              icon: const Icon(Icons.file_download, size: 18),
+                              label: const Text('Export Invoice'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.shade600,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          ElevatedButton.icon(
-                            onPressed: _promptAndExport,
-                            icon: const Icon(Icons.file_download, size: 18),
-                            label: const Text('Export Invoice'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green.shade600,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Records Count
               Align(
@@ -1226,9 +1229,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade700, fontWeight: FontWeight.w500),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
 
-              // Table
+              // Table with proper constraints
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
