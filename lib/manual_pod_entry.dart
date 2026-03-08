@@ -1,50 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:rajpurohit/sidebar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:typed_data';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
 
 import 'config/api.dart';
-
-class PodData {
-  final int podNumber;
-  final String date;
-  final String formattedDate;
-  final String from;
-  final String to;
-  final String origin;
-  final String destination;
-  final String doc;
-  final int weight;
-  final int? volWeight;
-  final int pieces;
-  final int amount;
-  final String status;
-  final String sender;
-
-  PodData({
-    required this.podNumber,
-    required this.date,
-    required this.formattedDate,
-    required this.from,
-    required this.to,
-    required this.origin,
-    required this.destination,
-    required this.doc,
-    required this.weight,
-    required this.volWeight,
-    required this.pieces,
-    required this.amount,
-    required this.status,
-    required this.sender,
-  });
-}
+import 'pod_data.dart';
 
 class CommonTextField extends StatelessWidget {
   final String hintText;
@@ -69,7 +30,20 @@ class CommonTextField extends StatelessWidget {
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
         hintText: hintText,
-        border: OutlineInputBorder(),
+        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+        ),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       ),
     );
   }
@@ -118,8 +92,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
   String selected_status = 'Unpaid';
   List<String> senderOptions = [];
   String? selectedOption;
-  PodData? submittedPod;
-  String address = '';
   String apiUrl = '${ApiConfig.baseUrl}';
   List<String> locationOptions = [];
   String? _origin;
@@ -192,541 +164,13 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
   @override
   void initState() {
     super.initState();
-    fetchAddress();
     fetchLocations();
     fetchSenders();
     fetchSuggestions();
   }
 
-  Future<String> fetchAddress() async {
-    final response = await http.get(
-      Uri.parse('${ApiConfig.baseUrl}/get-address'),
-    );
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      return data['address'];
-    } else {
-      print("Failed to load address");
-      return 'No address found';
-    }
-  }
-
-  Future<void> generateAndPreviewInvoice(
-      BuildContext context,
-      PodData pod,
-      ) async {
-    final fetchedAddress = await fetchAddress();
-    print("Generating PDF with address: $fetchedAddress");
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: Text('Invoice Preview')),
-          body: PdfPreview(
-            build: (format) => _generatePdf(format, pod, fetchedAddress),
-          ),
-        ),
-      ),
-    );
-  }
-
-  pw.Widget buildInvoice(PodData pod, pw.ImageProvider image, String address) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.all(5),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Row(
-                children: [
-                  pw.Container(
-                    width: 160,
-                    height: 80,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    child: pw.Stack(
-                      children: [
-                        pw.Image(image),
-                        pw.Column(
-                          mainAxisAlignment: pw.MainAxisAlignment.end,
-                          crossAxisAlignment: pw.CrossAxisAlignment.center,
-                          children: [
-                            pw.Text(
-                              '    M/S JOGSINGH.A.RAJPUROHIT',
-                              style: pw.TextStyle(fontSize: 9),
-                            ),
-                            pw.Text(
-                              'GSTIN 27BUXPS4675M1ZA',
-                              style: pw.TextStyle(fontSize: 8),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  pw.Container(
-                    width: 120,
-                    height: 80,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    padding: const pw.EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 4,
-                    ),
-                    child: pw.Text(address, style: pw.TextStyle(fontSize: 10)),
-                  ),
-                  pw.Container(
-                    width: 140,
-                    height: 80,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    child: pw.Column(
-                      children: [
-                        pw.Container(
-                          width: 140,
-                          height: 40,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 4,
-                          ),
-                          child: pw.Row(
-                            children: [
-                              pw.Text('Date - '),
-                              pw.Text(pod.formattedDate),
-                            ],
-                          ),
-                        ),
-                        pw.Container(
-                          width: 140,
-                          height: 40,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 4,
-                          ),
-                          child: pw.Row(
-                            children: [
-                              pw.Text('AWB no. - '),
-                              pw.Text('${pod.podNumber}'),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  pw.Container(
-                    width: 140,
-                    height: 80,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    child: pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
-                      children: [
-                        pw.Container(
-                          width: 140,
-                          height: 20,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                            color: PdfColor.fromInt(0xff2a3368),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 1,
-                          ),
-                          child: pw.Text(
-                            'Origin',
-                            style: pw.TextStyle(color: PdfColors.white),
-                          ),
-                        ),
-                        pw.Container(
-                          width: 140,
-                          height: 20,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 1,
-                          ),
-                          child: pw.Text(pod.origin),
-                        ),
-                        pw.Container(
-                          width: 140,
-                          height: 20,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                            color: PdfColor.fromInt(0xff2a3368),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 1,
-                          ),
-                          child: pw.Text(
-                            'Destination',
-                            style: pw.TextStyle(color: PdfColors.white),
-                          ),
-                        ),
-                        pw.Container(
-                          width: 140,
-                          height: 20,
-                          decoration: pw.BoxDecoration(
-                            border: pw.Border.all(width: 1),
-                          ),
-                          padding: const pw.EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 1,
-                          ),
-                          child: pw.Text(pod.destination),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              pw.Row(
-                children: [
-                  pw.Container(
-                    width: 280,
-                    height: 60,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('From'),
-                        pw.SizedBox(height: 5),
-                        pw.Text(
-                          pod.from,
-                          style: pw.TextStyle(
-                            fontSize: 15,
-                            color: PdfColor.fromInt(0xff2a3368),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  pw.Container(
-                    width: 280,
-                    height: 60,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.Text('To'),
-                        pw.SizedBox(height: 5),
-                        pw.Text(
-                          pod.to,
-                          style: pw.TextStyle(
-                            fontSize: 15,
-                            color: PdfColor.fromInt(0xff2a3368),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              pw.Row(
-                children: [
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Contents',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(pod.doc),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Weight',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.weight} kg'),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Vol. Weight',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.volWeight} kg'),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Pieces',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.pieces}'),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Amount',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.amount}'),
-                      ),
-                    ],
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(
-                          'Status',
-                          style: pw.TextStyle(
-                            color: PdfColors.white,
-                            fontSize: 10,
-                          ),
-                        ),
-                      ),
-                      pw.Container(
-                        width: 93.33,
-                        height: 30,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text(pod.status),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              pw.Row(
-                children: [
-                  pw.Container(
-                    width: 280,
-                    height: 50,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'I/WE HEREBY DECLARE THAT THIS CONSIGNMENT DOES NOT CONTAIN ANY CASH, SHARE CERTIFICATES, BEARER CHEQUES, JEWELLERY, CONTRABAND, DRUGS, WEAPONS, EXPLOSIVES, OR ANY ITEM PROHIBITED UNDER THE LAWS AND REGULATIONS OF THE CENTRAL, STATE, OR LOCAL AUTHORITIES.',
-                      style: pw.TextStyle(
-                        fontSize: 7,
-                        lineSpacing: 2,
-                        wordSpacing: 1,
-                      ),
-                      textAlign: pw.TextAlign.justify,
-                    ),
-                  ),
-                  pw.Column(
-                    children: [
-                      pw.Container(
-                        width: 140,
-                        height: 25,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                          color: PdfColor.fromInt(0xff2a3368),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Row(
-                          children: [
-                            pw.Text(
-                              'Sender - ',
-                              style: pw.TextStyle(color: PdfColors.white),
-                            ),
-                            pw.Text(
-                              pod.sender,
-                              style: pw.TextStyle(color: PdfColors.white),
-                            ),
-                          ],
-                        ),
-                      ),
-                      pw.Container(
-                        width: 140,
-                        height: 25,
-                        decoration: pw.BoxDecoration(
-                          border: pw.Border.all(width: 1),
-                        ),
-                        padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('Sign - '),
-                      ),
-                    ],
-                  ),
-                  pw.Container(
-                    width: 140,
-                    height: 50,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(width: 1),
-                    ),
-                    padding: const pw.EdgeInsets.all(4),
-                    child: pw.Text(
-                      'Receiving Sign & Stamp',
-                      style: pw.TextStyle(fontSize: 10),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<Uint8List> _generatePdf(
-      PdfPageFormat format,
-      PodData pod,
-      String address,
-      ) async {
-    final pdf = pw.Document();
-    final imageBytes = await rootBundle.load('assets/images/logo1.png');
-    final image = pw.MemoryImage(imageBytes.buffer.asUint8List());
-    pdf.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(10),
-        build: (context) => pw.Column(
-          children: List.generate(
-            3,
-                (index) => pw.Column(
-              children: [
-                buildInvoice(pod, image, address),
-                if (index < 2)
-                  pw.Divider(),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    return pdf.save();
-  }
-
   void _clearForm() {
     setState(() {
-      // Clear all text controllers
       _podNumber.clear();
       _dateDay.clear();
       _dateMonth.clear();
@@ -738,18 +182,14 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       _piece.clear();
       _rate.clear();
 
-      // Reset dropdowns and selections to defaults
       selected_doc = 'Documents';
       selected_status = 'Unpaid';
       selectedOption = senderOptions.isNotEmpty ? senderOptions[0] : null;
       _origin = locationOptions.isNotEmpty ? locationOptions[0] : null;
       _destination = locationOptions.length > 1 ? locationOptions[1] : null;
 
-      // Reset amount and submitted pod
       _amount = 0;
-      submittedPod = null;
 
-      // Move focus back to POD number field
       FocusScope.of(context).requestFocus(_podNumberFocus);
     });
   }
@@ -757,7 +197,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
   Future<void> submitPodData() async {
     print("🟡 SUBMIT BUTTON PRESSED");
 
-    // Validate manual POD number
     if (_podNumber.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please enter POD number")),
@@ -765,7 +204,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
-    // Validate date fields
     if (_dateDay.text.isEmpty || _dateMonth.text.isEmpty || _dateYear.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all date fields")),
@@ -773,19 +211,18 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
-    // Validate and parse date
     int? day = int.tryParse(_dateDay.text.trim());
     int? month = int.tryParse(_dateMonth.text.trim());
     int? year = int.tryParse(_dateYear.text.trim());
 
-    if (day == null || month == null || year == null || day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
+    if (day == null || month == null || year == null ||
+        day < 1 || day > 31 || month < 1 || month > 12 || year < 1900) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please enter valid date values")),
       );
       return;
     }
 
-    // Validate weight and rate
     if (_weight.text.isEmpty || _rate.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all required fields")),
@@ -807,7 +244,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
     final int volWeight = int.tryParse(_volweight.text) ?? 0;
     _amount = (volWeight == 0 ? weight : volWeight) * rate;
 
-    // Validate all other fields
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
         (_origin?.trim().isEmpty ?? true) ||
@@ -823,7 +259,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
-    // Create DateTime object
     DateTime dateTime = DateTime(year, month, day);
     String formattedDate = dateTime.toIso8601String();
 
@@ -859,7 +294,6 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
         ),
       );
 
-      // Clear the form for next entry
       _clearForm();
     } else if (response.statusCode == 409) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -898,517 +332,576 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
     return WatermarkedScaffold(
       appBar: AppBar(
         backgroundColor: Color(0xff2a3368),
-        title: Text('Manual POD Entry', style: TextStyle(color: Colors.white)),
+        title: Text('Manual POD Entry', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 2,
       ),
       drawer: sidebar(),
-      body: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: Center(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SizedBox(
-              width: 900,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    child: Column(
-                      children: [
-                        Column(
+      body: Container(
+        color: Colors.grey.shade50,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 900),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header
+                    Padding(
+                      padding: EdgeInsets.only(bottom: 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Manual POD Details',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xff2a3368),
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Container(
+                            width: 60,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade600,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Form Card
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      color: Colors.white,
+                      child: Padding(
+                        padding: EdgeInsets.all(28),
+                        child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(height: 30),
-                            // POD Number
-                            Row(
-                              children: [
-                                Text('   POD No.  :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 150,
-                                  child: CommonTextField(
-                                    hintText: 'Enter POD Number',
-                                    controller: _podNumber,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _podNumberFocus,
-                                  ),
+                            // POD Number Section
+                            _buildFormSection(
+                              label: 'POD Number',
+                              child: SizedBox(
+                                height: 52,
+                                child: CommonTextField(
+                                  hintText: 'Enter POD number',
+                                  controller: _podNumber,
+                                  keyboardType: TextInputType.number,
+                                  focusNode: _podNumberFocus,
                                 ),
-                              ],
+                              ),
                             ),
-                            SizedBox(height: 10),
-                            // Date Entry
-                            Row(
-                              children: [
-                                Text('   Date       :  ', style: TextStyle(fontSize: 20)),
-                                // Day
-                                SizedBox(
-                                  height: 45,
-                                  width: 60,
-                                  child: CommonTextField(
-                                    hintText: 'DD',
-                                    controller: _dateDay,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _dateDayFocus,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Text('/', style: TextStyle(fontSize: 20)),
-                                SizedBox(width: 10),
-                                // Month
-                                SizedBox(
-                                  height: 45,
-                                  width: 60,
-                                  child: CommonTextField(
-                                    hintText: 'MM',
-                                    controller: _dateMonth,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _dateMonthFocus,
-                                  ),
-                                ),
-                                SizedBox(width: 10),
-                                Text('/', style: TextStyle(fontSize: 20)),
-                                SizedBox(width: 10),
-                                // Year
-                                SizedBox(
-                                  height: 45,
-                                  width: 100,
-                                  child: CommonTextField(
-                                    hintText: 'YYYY',
-                                    controller: _dateYear,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _dateYearFocus,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 20),
-                            Row(
-                              children: [
-                                Text('   From :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 250,
-                                  child: Autocomplete<String>(
-                                    focusNode: _fromFocus,
-                                    textEditingController: _from,
-                                    optionsBuilder: (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text.isEmpty) {
-                                        return const Iterable<String>.empty();
-                                      }
-                                      return nameSuggestions.where(
-                                            (option) => option
-                                            .toLowerCase()
-                                            .contains(textEditingValue.text.toLowerCase()),
-                                      );
-                                    },
-                                    onSelected: (String selection) {
-                                      _from.text = selection;
-                                      FocusScope.of(context).requestFocus(_toFocus);
-                                    },
-                                    fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                                      return TextField(
-                                        controller: controller,
-                                        focusNode: focusNode,
-                                        textInputAction: TextInputAction.done,
-                                        onSubmitted: (value) {
-                                          onEditingComplete();
-                                          FocusScope.of(context).requestFocus(_toFocus);
-                                        },
-                                        decoration: const InputDecoration(
-                                          hintText: 'Name',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   To      :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 250,
-                                  child: Autocomplete<String>(
-                                    focusNode: _toFocus,
-                                    textEditingController: _to,
-                                    optionsBuilder: (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text.isEmpty) {
-                                        return const Iterable<String>.empty();
-                                      }
-                                      return nameSuggestions.where(
-                                            (option) => option
-                                            .toLowerCase()
-                                            .contains(textEditingValue.text.toLowerCase()),
-                                      );
-                                    },
-                                    onSelected: (String selection) {
-                                      _to.text = selection;
-                                      FocusScope.of(context).requestFocus(_originFocus);
-                                    },
-                                    fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
-                                      return TextField(
-                                        controller: controller,
-                                        focusNode: focusNode,
-                                        textInputAction: TextInputAction.done,
-                                        onSubmitted: (value) {
-                                          onEditingComplete();
-                                          FocusScope.of(context).requestFocus(_originFocus);
-                                        },
-                                        decoration: const InputDecoration(
-                                          hintText: 'Name',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Origin : ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 55,
-                                  width: 250,
-                                  child: DropdownButtonFormField<String>(
-                                    focusNode: _originFocus,
-                                    isExpanded: true,
-                                    decoration: InputDecoration(
-                                      labelText: 'Origin',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                    ),
-                                    value: _origin,
-                                    items: locationOptions.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        _origin = newValue;
-                                      });
-                                      Future.delayed(Duration(milliseconds: 100), () {
-                                        FocusScope.of(context).requestFocus(_destinationFocus);
-                                      });
-                                    },
-                                  ),
-                                ),
-                                SizedBox(width: 20),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Destination : ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 55,
-                                  width: 250,
-                                  child: DropdownButtonFormField<String>(
-                                    focusNode: _destinationFocus,
-                                    isExpanded: true,
-                                    decoration: InputDecoration(
-                                      labelText: 'Destination',
-                                      border: OutlineInputBorder(),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                                    ),
-                                    value: _destination,
-                                    items: locationOptions.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        _destination = newValue;
-                                      });
-                                      Future.delayed(Duration(milliseconds: 100), () {
-                                        FocusScope.of(context).requestFocus(_weightFocus);
-                                      });
-                                    },
-                                  ),
-                                ),
-                                SizedBox(width: 20),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('  Contents :', style: TextStyle(fontSize: 20)),
-                                Column(
-                                  children: [
-                                    SizedBox(
-                                      height: 45,
-                                      width: 125,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            selected_doc = 'Documents';
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: selected_doc == 'Documents'
-                                              ? Color(0xff2a3368)
-                                              : Colors.white,
-                                          foregroundColor: selected_doc == 'Documents'
-                                              ? Colors.white
-                                              : Color(0xff2a3368),
-                                        ),
-                                        child: Text('Documents'),
+
+                            // Date Section
+                            _buildFormSection(
+                              label: 'Date',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    flex: 1,
+                                    child: SizedBox(
+                                      height: 52,
+                                      child: CommonTextField(
+                                        hintText: 'DD',
+                                        controller: _dateDay,
+                                        keyboardType: TextInputType.number,
+                                        focusNode: _dateDayFocus,
                                       ),
                                     ),
-                                    SizedBox(height: 10),
-                                    SizedBox(
-                                      height: 45,
-                                      width: 125,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            selected_doc = 'Non-Docx';
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: selected_doc == 'Non-Docx'
-                                              ? Color(0xff2a3368)
-                                              : Colors.white,
-                                          foregroundColor: selected_doc == 'Non-Docx'
-                                              ? Colors.white
-                                              : Color(0xff2a3368),
-                                        ),
-                                        child: Text('Non-Docx'),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('/', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w300)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: SizedBox(
+                                      height: 52,
+                                      child: CommonTextField(
+                                        hintText: 'MM',
+                                        controller: _dateMonth,
+                                        keyboardType: TextInputType.number,
+                                        focusNode: _dateMonthFocus,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Weight   :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 75,
-                                  child: CommonTextField(
-                                    hintText: 'kg',
-                                    controller: _weight,
-                                    keyboardType: TextInputType.number,
-                                    focusNode: _weightFocus,
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Vol. Wt   :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 75,
-                                  child: CommonTextField(
-                                    hintText: 'kg',
-                                    controller: _volweight,
-                                    focusNode: _volWeightFocus,
-                                    keyboardType: TextInputType.number,
+                                  SizedBox(width: 12),
+                                  Text('/', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w300)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    flex: 1,
+                                    child: SizedBox(
+                                      height: 52,
+                                      child: CommonTextField(
+                                        hintText: 'YYYY',
+                                        controller: _dateYear,
+                                        keyboardType: TextInputType.number,
+                                        focusNode: _dateYearFocus,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                            SizedBox(height: 10),
+
+                            // From Section
+                            _buildFormSection(
+                              label: 'From',
+                              child: SizedBox(
+                                height: 52,
+                                child: Autocomplete<String>(
+                                  focusNode: _fromFocus,
+                                  textEditingController: _from,
+                                  optionsBuilder: (TextEditingValue textEditingValue) {
+                                    if (textEditingValue.text.isEmpty) {
+                                      return const Iterable<String>.empty();
+                                    }
+                                    return nameSuggestions.where(
+                                          (option) => option
+                                          .toLowerCase()
+                                          .contains(textEditingValue.text.toLowerCase()),
+                                    );
+                                  },
+                                  onSelected: (String selection) {
+                                    _from.text = selection;
+                                    FocusScope.of(context).requestFocus(_toFocus);
+                                  },
+                                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                                    return TextField(
+                                      controller: controller,
+                                      focusNode: focusNode,
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (value) {
+                                        onEditingComplete();
+                                        FocusScope.of(context).requestFocus(_toFocus);
+                                      },
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter sender name',
+                                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+
+                            // To Section
+                            _buildFormSection(
+                              label: 'To',
+                              child: SizedBox(
+                                height: 52,
+                                child: Autocomplete<String>(
+                                  focusNode: _toFocus,
+                                  textEditingController: _to,
+                                  optionsBuilder: (TextEditingValue textEditingValue) {
+                                    if (textEditingValue.text.isEmpty) {
+                                      return const Iterable<String>.empty();
+                                    }
+                                    return nameSuggestions.where(
+                                          (option) => option
+                                          .toLowerCase()
+                                          .contains(textEditingValue.text.toLowerCase()),
+                                    );
+                                  },
+                                  onSelected: (String selection) {
+                                    _to.text = selection;
+                                    FocusScope.of(context).requestFocus(_originFocus);
+                                  },
+                                  fieldViewBuilder: (context, controller, focusNode, onEditingComplete) {
+                                    return TextField(
+                                      controller: controller,
+                                      focusNode: focusNode,
+                                      textInputAction: TextInputAction.done,
+                                      onSubmitted: (value) {
+                                        onEditingComplete();
+                                        FocusScope.of(context).requestFocus(_originFocus);
+                                      },
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter recipient name',
+                                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+
+                            // Origin & Destination Row
                             Row(
                               children: [
-                                Text('   Pieces    :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 75,
-                                  child: CommonTextField(
-                                    hintText: 'pcs',
-                                    controller: _piece,
-                                    focusNode: _pieceFocus,
-                                    keyboardType: TextInputType.number,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Rate        :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 45,
-                                  width: 150,
-                                  child: TextField(
-                                    controller: _rate,
-                                    keyboardType: TextInputType.number,
-                                    textInputAction: TextInputAction.next,
-                                    focusNode: _rateFocus,
-                                    onSubmitted: (_) {
-                                      FocusScope.of(context).requestFocus(_senderFocus);
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText: '₹',
-                                      border: OutlineInputBorder(),
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Origin',
+                                    child: DropdownButtonFormField<String>(
+                                      focusNode: _originFocus,
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                        labelText: 'Select origin city',
+                                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      ),
+                                      value: _origin,
+                                      items: locationOptions.map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        setState(() => _origin = newValue);
+                                        Future.delayed(Duration(milliseconds: 100), () {
+                                          FocusScope.of(context).requestFocus(_destinationFocus);
+                                        });
+                                      },
                                     ),
                                   ),
                                 ),
-                                SizedBox(width: 100),
-                                SizedBox(
-                                  height: 45,
-                                  width: 120,
-                                  child: ElevatedButton(
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Destination',
+                                    child: DropdownButtonFormField<String>(
+                                      focusNode: _destinationFocus,
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                        labelText: 'Select destination city',
+                                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                      ),
+                                      value: _destination,
+                                      items: locationOptions.map((String value) {
+                                        return DropdownMenuItem<String>(
+                                          value: value,
+                                          child: Text(value),
+                                        );
+                                      }).toList(),
+                                      onChanged: (String? newValue) {
+                                        setState(() => _destination = newValue);
+                                        Future.delayed(Duration(milliseconds: 100), () {
+                                          FocusScope.of(context).requestFocus(_weightFocus);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Contents Section
+                            _buildFormSection(
+                              label: 'Contents',
+                              child: Wrap(
+                                spacing: 12,
+                                children: [
+                                  _buildToggleButton(
+                                    label: 'Documents',
+                                    isSelected: selected_doc == 'Documents',
                                     onPressed: () {
-                                      setState(() {
-                                        if (_weight.text.isEmpty || _rate.text.isEmpty) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(content: Text("Please enter both weight and rate")),
-                                          );
-                                          return;
-                                        }
-
-                                        final int weight = int.tryParse(_weight.text) ?? 0;
-                                        final int volWeight = int.tryParse(_volweight.text) ?? 0;
-                                        final int rate = int.tryParse(_rate.text) ?? 0;
-
-                                        if (volWeight == 0) {
-                                          _amount = weight * rate;
-                                        } else {
-                                          _amount = volWeight * rate;
-                                        }
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.purple.shade900,
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: Text('Amount'),
-                                  ),
-                                ),
-                                SizedBox(width: 20),
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    border: Border.all(color: Colors.black, width: 1),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text('$_amount', style: TextStyle(fontSize: 18)),
-                                ),
-                                SizedBox(width: 50),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('  Status      :  ', style: TextStyle(fontSize: 20)),
-                                Row(
-                                  children: [
-                                    SizedBox(
-                                      height: 45,
-                                      width: 100,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            selected_status = 'Paid';
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: selected_status == 'Paid'
-                                              ? Color(0xff2a3368)
-                                              : Colors.white,
-                                          foregroundColor: selected_status == 'Paid'
-                                              ? Colors.white
-                                              : Color(0xff2a3368),
-                                        ),
-                                        child: Text('Paid'),
-                                      ),
-                                    ),
-                                    SizedBox(width: 10),
-                                    SizedBox(
-                                      height: 45,
-                                      width: 100,
-                                      child: ElevatedButton(
-                                        onPressed: () {
-                                          setState(() {
-                                            selected_status = 'Unpaid';
-                                          });
-                                        },
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: selected_status == 'Unpaid'
-                                              ? Color(0xff2a3368)
-                                              : Colors.white,
-                                          foregroundColor: selected_status == 'Unpaid'
-                                              ? Colors.white
-                                              : Color(0xff2a3368),
-                                        ),
-                                        child: Text('Unpaid'),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Text('   Sender  :  ', style: TextStyle(fontSize: 20)),
-                                SizedBox(
-                                  height: 50,
-                                  width: 225,
-                                  child: DropdownButtonFormField<String>(
-                                    focusNode: _senderFocus,
-                                    decoration: InputDecoration(
-                                      labelText: 'Select Sender',
-                                      border: OutlineInputBorder(),
-                                    ),
-                                    value: selectedOption,
-                                    items: senderOptions.map((String value) {
-                                      return DropdownMenuItem<String>(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        selectedOption = newValue;
-                                      });
-                                      Future.delayed(Duration(milliseconds: 100), () {
-                                        FocusScope.of(context).requestFocus(_submitFocus);
-                                      });
+                                      setState(() => selected_doc = 'Documents');
                                     },
                                   ),
-                                ),
-                                SizedBox(width: 20),
-                              ],
+                                  _buildToggleButton(
+                                    label: 'Non-Documents',
+                                    isSelected: selected_doc == 'Non-Docx',
+                                    onPressed: () {
+                                      setState(() => selected_doc = 'Non-Docx');
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
-                            SizedBox(height: 25),
+
+                            // Weight Details Row
                             Row(
                               children: [
-                                SizedBox(width: 100),
-                                SizedBox(
-                                  height: 50,
-                                  width: 150,
-                                  child: ElevatedButton(
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Weight (kg)',
+                                    child: CommonTextField(
+                                      hintText: 'Enter weight',
+                                      controller: _weight,
+                                      keyboardType: TextInputType.number,
+                                      focusNode: _weightFocus,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Vol. Weight (kg)',
+                                    child: CommonTextField(
+                                      hintText: 'Enter volumetric weight',
+                                      controller: _volweight,
+                                      focusNode: _volWeightFocus,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Pieces Details Row
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Pieces',
+                                    child: CommonTextField(
+                                      hintText: 'Enter number of pieces',
+                                      controller: _piece,
+                                      focusNode: _pieceFocus,
+                                      keyboardType: TextInputType.number,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: _buildFormSection(
+                                    label: 'Rate (₹)',
+                                    child: TextField(
+                                      controller: _rate,
+                                      focusNode: _rateFocus,
+                                      keyboardType: TextInputType.number,
+                                      textInputAction: TextInputAction.next,
+                                      onSubmitted: (_) {
+                                        FocusScope.of(context).requestFocus(_senderFocus);
+                                      },
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter rate',
+                                        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                        ),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            // Amount Calculation
+                            _buildFormSection(
+                              label: 'Amount',
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          if (_weight.text.isEmpty || _rate.text.isEmpty) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text("Please enter both weight and rate"),
+                                              ),
+                                            );
+                                            return;
+                                          }
+
+                                          final int weight = int.tryParse(_weight.text) ?? 0;
+                                          final int volWeight = int.tryParse(_volweight.text) ?? 0;
+                                          final int rate = int.tryParse(_rate.text) ?? 0;
+
+                                          if (volWeight == 0) {
+                                            _amount = weight * rate;
+                                          } else {
+                                            _amount = volWeight * rate;
+                                          }
+                                        });
+                                      },
+                                      icon: Icon(Icons.calculate),
+                                      label: Text('Calculate'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.blue.shade600,
+                                        foregroundColor: Colors.white,
+                                        padding: EdgeInsets.symmetric(vertical: 12),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      border: Border.all(color: Colors.blue.shade200),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      '₹${_amount.toString()}',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xff2a3368),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Status Section
+                            _buildFormSection(
+                              label: 'Payment Status',
+                              child: Wrap(
+                                spacing: 12,
+                                children: [
+                                  _buildToggleButton(
+                                    label: 'Paid',
+                                    isSelected: selected_status == 'Paid',
+                                    onPressed: () {
+                                      setState(() => selected_status = 'Paid');
+                                    },
+                                  ),
+                                  _buildToggleButton(
+                                    label: 'Unpaid',
+                                    isSelected: selected_status == 'Unpaid',
+                                    onPressed: () {
+                                      setState(() => selected_status = 'Unpaid');
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Sender Section
+                            _buildFormSection(
+                              label: 'Sender',
+                              child: DropdownButtonFormField<String>(
+                                focusNode: _senderFocus,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Select sender',
+                                  labelStyle: TextStyle(color: Colors.grey.shade600),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                ),
+                                value: selectedOption,
+                                items: senderOptions.map((String value) {
+                                  return DropdownMenuItem<String>(
+                                    value: value,
+                                    child: Text(value),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  setState(() => selectedOption = newValue);
+                                  Future.delayed(Duration(milliseconds: 100), () {
+                                    FocusScope.of(context).requestFocus(_submitFocus);
+                                  });
+                                },
+                              ),
+                            ),
+
+                            // Action Buttons
+                            SizedBox(height: 32),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
                                     focusNode: _submitFocus,
                                     onPressed: () async {
                                       bool? confirm = await showDialog<bool>(
                                         context: context,
                                         builder: (context) {
                                           return AlertDialog(
-                                            title: const Text("Are you sure?"),
-                                            content: const Text("Do you want to submit this data?"),
+                                            title: const Text("Confirm Submission"),
+                                            content: const Text("Are you sure you want to submit this POD data?"),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
                                             actions: [
                                               TextButton(
                                                 onPressed: () => Navigator.pop(context, false),
-                                                child: const Text("No"),
+                                                child: const Text("Cancel"),
                                               ),
                                               ElevatedButton(
                                                 onPressed: () => Navigator.pop(context, true),
-                                                child: const Text("Yes"),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Color(0xff2a3368),
+                                                  foregroundColor: Colors.white,
+                                                ),
+                                                child: const Text("Submit"),
                                               ),
                                             ],
                                           );
@@ -1419,22 +912,84 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                         submitPodData();
                                       }
                                     },
-                                    child: Text('Submit'),
+                                    icon: Icon(Icons.check_circle),
+                                    label: Text('Submit'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Color(0xff2a3368),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.symmetric(vertical: 14),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 25),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  // Helper method to build form sections with labels
+  Widget _buildFormSection({
+    required String label,
+    required Widget child,
+  }) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Color(0xff2a3368),
+              letterSpacing: 0.5,
+            ),
+          ),
+          SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  // Helper method to build toggle buttons
+  Widget _buildToggleButton({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: isSelected ? Color(0xff2a3368) : Colors.grey.shade100,
+        foregroundColor: isSelected ? Colors.white : Color(0xff2a3368),
+        elevation: isSelected ? 2 : 0,
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(
+            color: isSelected ? Color(0xff2a3368) : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
     );
   }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
-
 import 'config/api.dart';
 
 class sender extends StatefulWidget {
@@ -12,16 +11,52 @@ class sender extends StatefulWidget {
   State<sender> createState() => _senderState();
 }
 
-class _senderState extends State<sender> {
-
+class _senderState extends State<sender> with TickerProviderStateMixin {
   List<String> senders = [];
   final TextEditingController _senderController = TextEditingController();
   final String apiUrl = '${ApiConfig.baseUrl}';
+  bool _isAdding = false;
+
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
     super.initState();
+    setupAnimations();
     fetchSenders();
+  }
+
+  void setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _slideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero)
+        .animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
+    );
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _senderController.dispose();
+    super.dispose();
   }
 
   Future<void> fetchSenders() async {
@@ -41,6 +76,7 @@ class _senderState extends State<sender> {
 
   Future<void> addSender(String name) async {
     if (name.trim().isEmpty) return;
+    setState(() => _isAdding = true);
     try {
       final response = await http.post(
         Uri.parse('$apiUrl/add-sender'),
@@ -49,10 +85,19 @@ class _senderState extends State<sender> {
       );
       if (response.statusCode == 200) {
         _senderController.clear();
-        fetchSenders();
+        await fetchSenders();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Sender added'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
       }
     } catch (e) {
       print("❌ Error adding sender: $e");
+    } finally {
+      setState(() => _isAdding = false);
     }
   }
 
@@ -60,7 +105,14 @@ class _senderState extends State<sender> {
     try {
       final response = await http.delete(Uri.parse('$apiUrl/delete-sender/$name'));
       if (response.statusCode == 200) {
-        fetchSenders();
+        await fetchSenders();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Sender deleted'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
+        );
       }
     } catch (e) {
       print("❌ Error deleting sender: $e");
@@ -70,51 +122,207 @@ class _senderState extends State<sender> {
   @override
   Widget build(BuildContext context) {
     return WatermarkedScaffold(
-        appBar: AppBar(
-          backgroundColor: Color(0xff2a3368),
-          title: Text('Edit Sender Data', style: TextStyle(color: Colors.white),),
-          iconTheme: const IconThemeData(
+      appBar: AppBar(
+        backgroundColor: const Color(0xff2a3368),
+        title: const Text(
+          'Sender Data',
+          style: TextStyle(
             color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
           ),
-
         ),
-        body: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                controller: _senderController,
-                decoration: InputDecoration(
-                  labelText: 'Add new sender',
-                  border: OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: () => addSender(_senderController.text),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              Expanded(
-                child: senders.isEmpty
-                    ? Center(child: Text('No senders available'))
-                    : ListView.builder(
-                  itemCount: senders.length,
-                  itemBuilder: (context, index) {
-                    return Card(
-                      child: ListTile(
-                        title: Text(senders[index]),
-                        trailing: IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => deleteSender(senders[index]),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+        centerTitle: true,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xff2a3368).withOpacity(0.05),
+              Colors.purple.withOpacity(0.02),
             ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
         ),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Add Sender Card
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        )
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _senderController,
+                            style: const TextStyle(
+                              color: Color(0xff2a3368),
+                              fontSize: 15,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'Add new sender',
+                              hintStyle: TextStyle(
+                                color: Colors.grey.shade400,
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.all(12),
+                              prefixIcon: Icon(
+                                Icons.person_add,
+                                color: Colors.grey.shade400,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xff2a3368), Color(0xff3d4a8a)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: _isAdding
+                                  ? null
+                                  : () => addSender(_senderController.text),
+                              borderRadius: BorderRadius.circular(12),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: _isAdding
+                                    ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor:
+                                    AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                )
+                                    : const Icon(
+                                  Icons.add,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Senders List
+                  Expanded(
+                    child: senders.isEmpty
+                        ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.person_outline,
+                            size: 64,
+                            color: Colors.grey.shade300,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No senders available',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                        : ListView.builder(
+                      itemCount: senders.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.08),
+                                  blurRadius: 10,
+                                  spreadRadius: 1,
+                                )
+                              ],
+                            ),
+                            child: ListTile(
+                              leading: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  color: Colors.purple,
+                                  size: 22,
+                                ),
+                              ),
+                              title: Text(
+                                senders[index],
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w500,
+                                  color: Color(0xff2a3368),
+                                ),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.red,
+                                  size: 22,
+                                ),
+                                onPressed: () => deleteSender(senders[index]),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
