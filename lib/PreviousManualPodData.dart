@@ -20,6 +20,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:app_settings/app_settings.dart';
 
 class PreviousManualPodData extends StatefulWidget {
   const PreviousManualPodData({super.key});
@@ -93,8 +95,12 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             pod.from.toLowerCase().contains(fromController.text.toLowerCase());
         bool matchesTo = toController.text.isEmpty ||
             pod.to.toLowerCase().contains(toController.text.toLowerCase());
+
+        // ===== UPDATED: Handle both "R12345" and "12345" search formats =====
         bool matchesID = idController.text.isEmpty ||
-            pod.podNumber.toString().contains(idController.text);
+            pod.podNumber.toString().contains(idController.text) ||
+            pod.podNumber.toString().replaceAll('R', '').contains(idController.text);
+
         bool matchesStatus =
             selectedStatus == null || selectedStatus == 'All' || pod.status == selectedStatus;
 
@@ -449,7 +455,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
       setInt(0, r, i + 1, dataCell());
       setText(1, r, pod.formattedDate, dataCell());
-      setInt(2, r, pod.podNumber, dataCell());
+      // ===== UPDATED: Export POD number with R prefix =====
+      setText(2, r, pod.podNumber.toString(), dataCell());
       setText(3, r, pod.from, dataCellLeft());
       setText(4, r, pod.to, dataCellLeft());
       setInt(5, r, int.tryParse(pod.weight) ?? 0, dataCell());
@@ -604,24 +611,215 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
   Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
-      if (await Permission.storage.isGranted) return true;
-      var storage = await Permission.storage.request();
-      return storage.isGranted;
+      try {
+        // Get Android version
+        final deviceInfo = DeviceInfoPlugin();
+        final androidInfo = await deviceInfo.androidInfo;
+        final androidVersion = androidInfo.version.sdkInt;
+
+        print('📱 Android SDK Version: $androidVersion');
+
+        // ========== ANDROID 13+ (API 33+) ==========
+        if (androidVersion >= 33) {
+          print('🔄 Requesting Android 13+ permissions...');
+
+          // Primary: Request MANAGE_EXTERNAL_STORAGE for full access
+          var manageExternal = await Permission.manageExternalStorage.request();
+
+          if (manageExternal.isGranted) {
+            print('✅ MANAGE_EXTERNAL_STORAGE granted (Full access)');
+            return true;
+          }
+
+          // Secondary: Try scoped storage (photos/videos)
+          if (manageExternal.isDenied) {
+            print('⚠️ Trying scoped storage approach...');
+            var photos = await Permission.photos.request();
+            var videos = await Permission.videos.request();
+
+            if (photos.isGranted || videos.isGranted) {
+              print('✅ Scoped storage granted (Photos/Videos)');
+              return true;
+            }
+          }
+
+          // Tertiary: If permanently denied, show dialog with settings link
+          if (manageExternal.isPermanentlyDenied) {
+            print('❌ Permission permanently denied');
+            _showStoragePermissionDialog();
+            return false;
+          }
+        }
+
+        // ========== ANDROID 6-12 (API 21-32) ==========
+        else if (androidVersion >= 21) {
+          print('🔄 Requesting Android 6-12 permissions...');
+
+          var storage = await Permission.storage.request();
+
+          if (storage.isGranted) {
+            print('✅ WRITE_EXTERNAL_STORAGE granted');
+            return true;
+          }
+
+          if (storage.isDenied) {
+            print('⚠️ Storage permission denied (user can retry)');
+            _showStoragePermissionDialog();
+            return false;
+          }
+
+          if (storage.isPermanentlyDenied) {
+            print('❌ Storage permission permanently denied');
+            _showStoragePermissionDialog();
+            return false;
+          }
+        }
+
+        // ========== ANDROID 5 & BELOW ==========
+        else {
+          print('✅ Android 5 and below - no runtime permissions needed');
+          return true;
+        }
+
+      } catch (e) {
+        print('❌ Error checking permissions: $e');
+        _showErrorSnackbar('Permission error: $e');
+        return false;
+      }
     }
+
+    // ========== iOS & OTHER PLATFORMS ==========
+    print('✅ Non-Android platform - permissions granted');
     return true;
   }
 
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+// ========== HELPER: Show Permission Dialog ==========
+  void _showStoragePermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.folder_off, color: Colors.red, size: 24),
+            const SizedBox(width: 8),
+            const Text('Storage Permission Required'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This app needs permission to save Excel files to your Downloads folder.',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How to fix:',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStepText('1', 'Go to Settings'),
+                    _buildStepText('2', 'Tap "Apps" or "Application Manager"'),
+                    _buildStepText('3', 'Find and tap "Rajpurohit"'),
+                    _buildStepText('4', 'Tap "Permissions" or "App Permissions"'),
+                    _buildStepText('5', 'Tap "Files and media" or "Storage"'),
+                    _buildStepText('6', 'Select "Allow" (or "Allow all files" if available)'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, color: Colors.blue, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: const Text(
+                        'After granting permission, return to the app and try exporting again.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              openAppSettings();
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff2a3368),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            icon: const Icon(Icons.settings, size: 18),
+            label: const Text('Open Settings'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showSuccessSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+// ========== HELPER: Build Step Text ==========
+  Widget _buildStepText(String step, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        '$step. $text',
+        style: const TextStyle(fontSize: 12, height: 1.4),
+      ),
     );
   }
+
+// ========== ERROR SNACKBAR HELPER ==========
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+// ========== SUCCESS SNACKBAR HELPER ==========
+  void _showSuccessSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
 
   Future<String> _fetchAddress() async {
     try {
@@ -697,7 +895,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       child: pw.Row(children: [
                         pw.Text('AWB no. - '),
-                        pw.Text('${pod.podNumber}'),
+                        // ===== UPDATED: Display POD with R prefix =====
+                        pw.Text(pod.podNumber.toString()),
                       ]),
                     ),
                   ]),
@@ -877,7 +1076,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         builder: (_) => Scaffold(
           appBar: AppBar(
             backgroundColor: const Color(0xff2a3368),
-            title: Text('POD-${pod.podNumber}',
+            // ===== UPDATED: Display POD with R prefix in appbar =====
+            title: Text(pod.podNumber.toString(),
                 style: const TextStyle(color: Colors.white)),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
@@ -886,6 +1086,15 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         ),
       ),
     );
+  }
+
+  // ===== NEW HELPER: Extract pod number without R prefix =====
+  int _extractPodNumber(dynamic podNumber) {
+    String str = podNumber.toString();
+    if (str.startsWith('R')) {
+      str = str.substring(1);
+    }
+    return int.tryParse(str) ?? 0;
   }
 
   // Improved Search Field Widget
@@ -971,7 +1180,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               return Colors.white;
             }),
             cells: [
-              DataCell(Text("POD-${pod.podNumber}", style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+              // ===== UPDATED: Display POD with R prefix =====
+              DataCell(Text(pod.podNumber.toString(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
               DataCell(Text(pod.formattedDate, style: const TextStyle(fontSize: 12))),
               DataCell(Text(pod.from, style: const TextStyle(fontSize: 12))),
               DataCell(Text(pod.to, style: const TextStyle(fontSize: 12))),
@@ -992,11 +1202,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
                         tooltip: 'Edit Vol Weight',
                         onPressed: () {
+                          // ===== UPDATED: Extract number without R prefix for backend =====
+                          int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditVolWeightManualPage(
-                                podId: pod.podNumber,
+                                podId: podId,
                                 currentVolWeight: pod.volWeight,
                                 weight: int.parse(pod.weight),
                               ),
@@ -1037,11 +1249,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
                         tooltip: 'Edit Payment Status',
                         onPressed: () {
+                          // ===== UPDATED: Extract number without R prefix for backend =====
+                          int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditPaymentStatusManualPage(
-                                podId: pod.podNumber,
+                                podId: podId,
                                 currentStatus: pod.status,
                               ),
                             ),
@@ -1121,7 +1335,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       // POD No. Search
                       buildSearchField(
                         controller: idController,
-                        label: 'Search by POD No.',
+                        label: 'Search by POD No. (e.g., R123 or 123)',
                         onChanged: filterTable,
                       ),
                       const SizedBox(height: 12),

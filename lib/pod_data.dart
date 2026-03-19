@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
 class PodData {
-  final int podNumber;
+  final String podNumber;  // Changed from int to String to store "R12345"
   final String from;
   final String to;
   final String doc;
@@ -43,8 +43,28 @@ class PodData {
       }
     }
 
+    // Handle POD number - can be int or String from backend
+    String podNumber = '';
+    dynamic podNum = json['podNumber'];
+
+    if (podNum != null) {
+      if (podNum is String) {
+        // Already has format like "R12345"
+        podNumber = podNum;
+      } else if (podNum is int) {
+        // Convert int to String with R prefix if not already there
+        podNumber = 'R$podNum';
+      } else {
+        // Fallback to string conversion
+        podNumber = podNum.toString();
+        if (!podNumber.startsWith('R')) {
+          podNumber = 'R$podNumber';
+        }
+      }
+    }
+
     return PodData(
-      podNumber: json['podNumber'] ?? 0,
+      podNumber: podNumber,
       from: json['from1'] ?? '',
       to: json['to1'] ?? '',
       origin: json['origin'] ?? '',

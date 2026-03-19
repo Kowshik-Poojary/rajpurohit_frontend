@@ -204,6 +204,24 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
+    // ===== Extract number and add R prefix =====
+    String podInput = _podNumber.text.trim().toUpperCase();
+
+    // Remove "R" if user already typed it
+    if (podInput.startsWith("R")) {
+      podInput = podInput.substring(1);
+    }
+
+    // Parse the remaining number
+    int? podNum = int.tryParse(podInput);
+
+    if (podNum == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please enter valid POD number (numbers only)")),
+      );
+      return;
+    }
+
     if (_dateDay.text.isEmpty || _dateMonth.text.isEmpty || _dateYear.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all date fields")),
@@ -232,9 +250,8 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
 
     int? weight = int.tryParse(_weight.text.trim());
     int? rate = int.tryParse(_rate.text.trim());
-    int? podNum = int.tryParse(_podNumber.text.trim());
 
-    if (weight == null || rate == null || podNum == null) {
+    if (weight == null || rate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please enter valid values")),
       );
@@ -264,11 +281,14 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
 
     var url = Uri.parse("${ApiConfig.baseUrl}/submitpod-manual");
 
+    // ===== IMPORTANT: Send POD with "R" prefix to backend =====
+    String podNumberWithPrefix = "R$podNum";
+
     var response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        "podNumber": podNum,
+        "podNumber": podNumberWithPrefix,  // Send WITH R prefix to backend
         "date1": formattedDate,
         "from1": _from.text,
         "to1": _to.text,
@@ -289,7 +309,7 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("✅ POD #${data['podNumber']} submitted successfully"),
+          content: Text("✅ POD ${data['podNumber']} submitted successfully"),
           duration: Duration(seconds: 2),
         ),
       );
@@ -393,11 +413,48 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                               label: 'POD Number',
                               child: SizedBox(
                                 height: 52,
-                                child: CommonTextField(
-                                  hintText: 'Enter POD number',
+                                child: TextField(
                                   controller: _podNumber,
-                                  keyboardType: TextInputType.number,
                                   focusNode: _podNumberFocus,
+                                  keyboardType: TextInputType.number,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    // Auto-format: ensure starts with R
+                                    if (value.isNotEmpty && !value.toUpperCase().startsWith('R')) {
+                                      _podNumber.text = 'R${value.replaceAll('R', '').replaceAll('r', '')}';
+                                      _podNumber.selection = TextSelection.fromPosition(
+                                        TextPosition(offset: _podNumber.text.length),
+                                      );
+                                    } else if (value.toUpperCase().startsWith('R')) {
+                                      // Ensure uppercase R
+                                      if (!value.startsWith('R')) {
+                                        _podNumber.text = 'R${value.substring(1)}';
+                                        _podNumber.selection = TextSelection.fromPosition(
+                                          TextPosition(offset: _podNumber.text.length),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: 'R12345',
+                                    helperText: 'Format: R followed by numbers (e.g., R12345)',
+                                    helperStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                    ),
+                                    prefixIcon: Icon(Icons.inventory_2, color: Colors.grey.shade600, size: 20),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  ),
                                 ),
                               ),
                             ),
