@@ -96,7 +96,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         bool matchesTo = toController.text.isEmpty ||
             pod.to.toLowerCase().contains(toController.text.toLowerCase());
 
-        // ===== UPDATED: Handle both "R12345" and "12345" search formats =====
         bool matchesID = idController.text.isEmpty ||
             pod.podNumber.toString().contains(idController.text) ||
             pod.podNumber.toString().replaceAll('R', '').contains(idController.text);
@@ -240,8 +239,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       print('Warning: Could not set column widths: $e');
     }
 
+    // ===== UPDATED: Changed font to Calibri throughout =====
     xl.CellStyle companyHeader({int size = 14}) => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: size,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -252,7 +252,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle subHeader({int size = 11}) => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: size,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -262,7 +262,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle addressLabel() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
@@ -270,14 +270,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle addressText() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
       verticalAlign: xl.VerticalAlign.Top,
     );
 
     xl.CellStyle tableHeader() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -289,7 +289,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle dataCell() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Center,
       verticalAlign: xl.VerticalAlign.Center,
@@ -300,7 +300,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle dataCellLeft() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
       verticalAlign: xl.VerticalAlign.Center,
@@ -310,36 +310,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
     );
 
-    xl.CellStyle billBorderLeft() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Left,
-      verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
-    xl.CellStyle billBorderRight() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Left,
-      verticalAlign: xl.VerticalAlign.Center,
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
-    xl.CellStyle billBorderBottom() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Right,
-      verticalAlign: xl.VerticalAlign.Center,
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
     xl.CellStyle plain({xl.HorizontalAlign align = xl.HorizontalAlign.Left, bool bold = false}) =>
         xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+          fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
           bold: bold,
           fontSize: 10,
           horizontalAlign: align,
@@ -348,45 +321,40 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
           rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
         );
 
+    // ===== UPDATED: Clean footer borders - labels have NO borders, only values have right border =====
     xl.CellStyle footerLabel() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      // NO BORDERS on labels
     );
 
     xl.CellStyle footerValue() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium), // Only right border
     );
 
     xl.CellStyle footerValueBold() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 12,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium), // Only right border
     );
 
     xl.CellStyle signatureStyle() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
     void setText(int col, int row, String value, xl.CellStyle style) {
@@ -429,8 +397,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     mergeRange(0, 5, 1, 5);
     setText(0, 5, 'To, ', plain());
 
+    // ===== UPDATED: Align Bill No. to the right =====
     mergeRange(6, 5, 7, 5);
-    setText(6, 5, 'BILL NO. :', plain());
+    setText(6, 5, 'BILL NO. :', plain(align: xl.HorizontalAlign.Right));
 
     final List<String> toLines = toAddress.split('\n');
     for (int i = 0; i < 4; i++) {
@@ -443,7 +412,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     setText(6, 6, 'Date: $today', plain(bold: true, align: xl.HorizontalAlign.Right));
 
     const int headerRowIdx = 10;
-    const List<String> cols = ['Sr. No.', 'Date', 'POD No.', 'From', 'To', 'Weight', 'BAG', 'Amount'];
+    // ===== UPDATED: Changed columns from "From, To" to "Origin, Destination" =====
+    const List<String> cols = ['Sr. No.', 'Date', 'POD No.', 'Origin', 'Destination', 'Weight', 'BAG', 'Amount'];
     for (int c = 0; c < cols.length; c++) {
       setText(c, headerRowIdx, cols[c], tableHeader());
     }
@@ -455,10 +425,10 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
       setInt(0, r, i + 1, dataCell());
       setText(1, r, pod.formattedDate, dataCell());
-      // ===== UPDATED: Export POD number with R prefix =====
       setText(2, r, pod.podNumber.toString(), dataCell());
-      setText(3, r, pod.from, dataCellLeft());
-      setText(4, r, pod.to, dataCellLeft());
+      // ===== UPDATED: Use origin and destination instead of from and to =====
+      setText(3, r, pod.origin, dataCellLeft());
+      setText(4, r, pod.destination, dataCellLeft());
       setInt(5, r, int.tryParse(pod.weight) ?? 0, dataCell());
       setInt(6, r, int.tryParse(pod.pieces) ?? 0, dataCell());
       setInt(7, r, int.tryParse(pod.amount) ?? 0, dataCell());
@@ -472,17 +442,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       totalAmount += int.tryParse(pod.amount) ?? 0;
     }
 
-    double cgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
-    double sgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
+    // ===== UPDATED: Calculate CGST and SGST without rounding =====
+    double cgstAmount = (totalAmount * 9) / 100;
+    double sgstAmount = (totalAmount * 9) / 100;
 
-    int cgstAmount = cgstAmountDouble.ceil();
-    int sgstAmount = sgstAmountDouble.ceil();
-
-    double subtotalDouble = totalAmount.toDouble() + cgstAmount.toDouble() + sgstAmount.toDouble();
-    int subtotalRounded = subtotalDouble.ceil();
-    int roundupAmount = subtotalRounded - (totalAmount + cgstAmount + sgstAmount);
-
-    int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
+    // ===== UPDATED: Only round the total amount =====
+    double subtotal = totalAmount + cgstAmount + sgstAmount;
+    int totalAmountRounded = subtotal.round();
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Amount', footerLabel());
@@ -491,41 +457,51 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'CGST 9%', footerLabel());
-    setInt(7, fRow, cgstAmount, footerValue());
+    // ===== UPDATED: Display CGST as decimal =====
+    final cell1 = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: fRow));
+    cell1.value = xl.DoubleCellValue(cgstAmount);
+    cell1.cellStyle = footerValue();
     fRow++;
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'SGST 9%', footerLabel());
-    setInt(7, fRow, sgstAmount, footerValue());
-    fRow++;
-
-    mergeRange(5, fRow, 6, fRow);
-    setText(5, fRow, 'Roundup', footerLabel());
-    setInt(7, fRow, roundupAmount, footerValue());
+    // ===== UPDATED: Display SGST as decimal =====
+    final cell2 = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: fRow));
+    cell2.value = xl.DoubleCellValue(sgstAmount);
+    cell2.cellStyle = footerValue();
     fRow++;
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Total Amount',
         xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+          fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
           bold: true,
           fontSize: 12,
           horizontalAlign: xl.HorizontalAlign.Right,
           verticalAlign: xl.VerticalAlign.Center,
+          leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+          rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+          topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+          bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
         ));
-    setInt(7, fRow, totalFinal, footerValueBold());
+    setInt(7, fRow, totalAmountRounded, footerValueBold());
     fRow += 2;
 
-    setText(7, fRow, 'Yours Truly,', signatureStyle());
+    setText(7, fRow, 'Yours Truly,', xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      // NO BORDERS
+    ));
     fRow++;
 
     final lastRow = fRow;
     final lastSignatureStyle = xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
@@ -612,18 +588,15 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
   Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
       try {
-        // Get Android version
         final deviceInfo = DeviceInfoPlugin();
         final androidInfo = await deviceInfo.androidInfo;
         final androidVersion = androidInfo.version.sdkInt;
 
         print('📱 Android SDK Version: $androidVersion');
 
-        // ========== ANDROID 13+ (API 33+) ==========
         if (androidVersion >= 33) {
           print('🔄 Requesting Android 13+ permissions...');
 
-          // Primary: Request MANAGE_EXTERNAL_STORAGE for full access
           var manageExternal = await Permission.manageExternalStorage.request();
 
           if (manageExternal.isGranted) {
@@ -631,7 +604,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             return true;
           }
 
-          // Secondary: Try scoped storage (photos/videos)
           if (manageExternal.isDenied) {
             print('⚠️ Trying scoped storage approach...');
             var photos = await Permission.photos.request();
@@ -643,16 +615,12 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             }
           }
 
-          // Tertiary: If permanently denied, show dialog with settings link
           if (manageExternal.isPermanentlyDenied) {
             print('❌ Permission permanently denied');
             _showStoragePermissionDialog();
             return false;
           }
-        }
-
-        // ========== ANDROID 6-12 (API 21-32) ==========
-        else if (androidVersion >= 21) {
+        } else if (androidVersion >= 21) {
           print('🔄 Requesting Android 6-12 permissions...');
 
           var storage = await Permission.storage.request();
@@ -673,10 +641,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             _showStoragePermissionDialog();
             return false;
           }
-        }
-
-        // ========== ANDROID 5 & BELOW ==========
-        else {
+        } else {
           print('✅ Android 5 and below - no runtime permissions needed');
           return true;
         }
@@ -688,12 +653,10 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       }
     }
 
-    // ========== iOS & OTHER PLATFORMS ==========
     print('✅ Non-Android platform - permissions granted');
     return true;
   }
 
-// ========== HELPER: Show Permission Dialog ==========
   void _showStoragePermissionDialog() {
     showDialog(
       context: context,
@@ -787,7 +750,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-// ========== HELPER: Build Step Text ==========
   Widget _buildStepText(String step, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -798,7 +760,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-// ========== ERROR SNACKBAR HELPER ==========
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -809,7 +770,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-// ========== SUCCESS SNACKBAR HELPER ==========
   void _showSuccessSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -819,7 +779,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       ),
     );
   }
-
 
   Future<String> _fetchAddress() async {
     try {
@@ -895,7 +854,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       child: pw.Row(children: [
                         pw.Text('AWB no. - '),
-                        // ===== UPDATED: Display POD with R prefix =====
                         pw.Text(pod.podNumber.toString()),
                       ]),
                     ),
@@ -1076,7 +1034,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         builder: (_) => Scaffold(
           appBar: AppBar(
             backgroundColor: const Color(0xff2a3368),
-            // ===== UPDATED: Display POD with R prefix in appbar =====
             title: Text(pod.podNumber.toString(),
                 style: const TextStyle(color: Colors.white)),
             iconTheme: const IconThemeData(color: Colors.white),
@@ -1088,7 +1045,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-  // ===== NEW HELPER: Extract pod number without R prefix =====
   int _extractPodNumber(dynamic podNumber) {
     String str = podNumber.toString();
     if (str.startsWith('R')) {
@@ -1097,7 +1053,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     return int.tryParse(str) ?? 0;
   }
 
-  // Improved Search Field Widget
   Widget buildSearchField({
     required TextEditingController controller,
     required String label,
@@ -1180,7 +1135,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               return Colors.white;
             }),
             cells: [
-              // ===== UPDATED: Display POD with R prefix =====
               DataCell(Text(pod.podNumber.toString(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
               DataCell(Text(pod.formattedDate, style: const TextStyle(fontSize: 12))),
               DataCell(Text(pod.from, style: const TextStyle(fontSize: 12))),
@@ -1202,7 +1156,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
                         tooltip: 'Edit Vol Weight',
                         onPressed: () {
-                          // ===== UPDATED: Extract number without R prefix for backend =====
                           int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
@@ -1249,7 +1202,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
                         tooltip: 'Edit Payment Status',
                         onPressed: () {
-                          // ===== UPDATED: Extract number without R prefix for backend =====
                           int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
@@ -1315,7 +1267,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Filter Cards
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1332,7 +1283,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 16),
 
-                      // POD No. Search
                       buildSearchField(
                         controller: idController,
                         label: 'Search by POD No. (e.g., R123 or 123)',
@@ -1340,7 +1290,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Origin & Destination
                       Row(
                         children: [
                           buildSearchField(
@@ -1358,7 +1307,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 12),
 
-                      // From & To
                       Row(
                         children: [
                           buildSearchField(
@@ -1376,7 +1324,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Status & Date Filters - Properly wrapped
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -1435,7 +1382,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               ),
               const SizedBox(height: 20),
 
-              // Records Count
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1445,7 +1391,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               ),
               const SizedBox(height: 8),
 
-              // Table with proper constraints
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

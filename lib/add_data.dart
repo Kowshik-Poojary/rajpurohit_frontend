@@ -20,10 +20,10 @@ class PodData {
   final String origin;
   final String destination;
   final String doc;
-  final int weight;
-  final int? volWeight;
+  final double weight;
+  final double? volWeight;
   final int pieces;
-  final int amount;
+  final double amount;
   final String status;
   final String sender;
 
@@ -318,7 +318,7 @@ class _add_dataState extends State<add_data> {
   final FocusNode _senderFocus = FocusNode();
   final FocusNode _submitFocus = FocusNode();
 
-  int _amount = 0;
+  double _amount = 0.0;
   String selected_status = 'Unpaid';
   List<String> senderOptions = [];
   String? selectedOption;
@@ -789,7 +789,7 @@ class _add_dataState extends State<add_data> {
                           border: pw.Border.all(width: 1),
                         ),
                         padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.amount}'),
+                        child: pw.Text('${pod.amount.toStringAsFixed(2)}'),
                       ),
                     ],
                   ),
@@ -938,18 +938,22 @@ class _add_dataState extends State<add_data> {
       return;
     }
 
-    int? weight = int.tryParse(_weight.text.trim());
-    int? rate = int.tryParse(_rate.text.trim());
+    double? weight = double.tryParse(_weight.text.trim());
+    double? rate = double.tryParse(_rate.text.trim());
 
     if (weight == null || rate == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("⚠️ Please enter valid Values")));
+      ).showSnackBar(const SnackBar(content: Text("⚠️ Please enter valid decimal values")));
       return;
     }
 
-    final int volWeight = int.tryParse(_volweight.text) ?? 0;
-    _amount = (volWeight == 0 ? weight : volWeight) * rate;
+    final double volWeight = double.tryParse(_volweight.text) ?? 0;
+    if (volWeight == 0) {
+      _amount = weight * rate;
+    } else {
+      _amount = volWeight * rate;
+    }
 
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
@@ -978,12 +982,12 @@ class _add_dataState extends State<add_data> {
         "doc": selected_doc,
         "origin": _origin,
         "destination": _destination,
-        "weight": int.tryParse(_weight.text) ?? 0,
+        "weight": double.tryParse(_weight.text) ?? 0,
         "vol_weight": _volweight.text.isEmpty
             ? null
-            : int.tryParse(_volweight.text),
+            : double.tryParse(_volweight.text),
         "pieces": int.tryParse(_piece.text) ?? 0,
-        "amount": int.tryParse(_amount.toString()) ?? 0,
+        "amount": _amount,
         "status1": selected_status,
         "sender": selectedOption,
       }),
@@ -992,14 +996,14 @@ class _add_dataState extends State<add_data> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
-      // Get the POD number with R prefix from backend response
-      String podNumberWithR = data['podNumber'].toString();
-      if (!podNumberWithR.startsWith('R')) {
-        podNumberWithR = 'R$podNumberWithR';
+      // Backend should return podNumber - format it with R if needed for display
+      String podNumberDisplay = data['podNumber'].toString();
+      if (!podNumberDisplay.startsWith('R')) {
+        podNumberDisplay = 'R$podNumberDisplay';
       }
 
       PodData pod = PodData(
-        podNumber: podNumberWithR,
+        podNumber: podNumberDisplay,
         date: data['date1'],
         formattedDate: DateFormat(
           'd-MM-yyyy',
@@ -1009,10 +1013,10 @@ class _add_dataState extends State<add_data> {
         origin: data['origin'],
         destination: data['destination'],
         doc: data['doc'],
-        weight: data['weight'],
-        volWeight: data['vol_weight'],
+        weight: (data['weight'] as num).toDouble(),
+        volWeight: data['vol_weight'] != null ? (data['vol_weight'] as num).toDouble() : null,
         pieces: data['pieces'],
-        amount: data['amount'],
+        amount: (data['amount'] as num).toDouble(),
         status: data['status1'],
         sender: data['sender'],
       );
@@ -1022,7 +1026,7 @@ class _add_dataState extends State<add_data> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("✅ POD $podNumberWithR submitted successfully")));
+      ).showSnackBar(SnackBar(content: Text("✅ POD $podNumberDisplay submitted successfully")));
     } else {
       ScaffoldMessenger.of(
         context,
@@ -1392,7 +1396,7 @@ class _add_dataState extends State<add_data> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Weight:',
+                                        'Weight (kg):',
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -1401,11 +1405,23 @@ class _add_dataState extends State<add_data> {
                                       ),
                                       const SizedBox(height: 8),
                                       CommonTextField(
-                                        hintText: 'kg',
+                                        hintText: 'e.g., 10.5',
                                         controller: _weight,
-                                        keyboardType: TextInputType.number,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         focusNode: _weightFocus,
                                         prefixIcon: Icons.scale,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _weight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _weight.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _weight.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),
@@ -1420,7 +1436,7 @@ class _add_dataState extends State<add_data> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Vol. Weight:',
+                                        'Vol. Weight (kg):',
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -1429,11 +1445,23 @@ class _add_dataState extends State<add_data> {
                                       ),
                                       const SizedBox(height: 8),
                                       CommonTextField(
-                                        hintText: 'kg',
+                                        hintText: 'e.g., 8.75',
                                         controller: _volweight,
                                         focusNode: _volWeightFocus,
-                                        keyboardType: TextInputType.number,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         prefixIcon: Icons.square_foot,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _volweight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _volweight.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _volweight.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),
@@ -1481,7 +1509,7 @@ class _add_dataState extends State<add_data> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Rate:',
+                                        'Rate (₹/kg):',
                                         style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
@@ -1490,11 +1518,23 @@ class _add_dataState extends State<add_data> {
                                       ),
                                       const SizedBox(height: 8),
                                       CommonTextField(
-                                        hintText: '₹',
+                                        hintText: 'e.g., 50.75',
                                         controller: _rate,
-                                        keyboardType: TextInputType.number,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                         focusNode: _rateFocus,
                                         prefixIcon: Icons.currency_rupee,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _rate.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _rate.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _rate.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
                                       ),
                                     ],
                                   ),
@@ -1526,7 +1566,7 @@ class _add_dataState extends State<add_data> {
                                             Padding(
                                               padding: const EdgeInsets.only(left: 16),
                                               child: Text(
-                                                '₹ $_amount',
+                                                '₹ ${_amount.toStringAsFixed(2)}',
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w600,
@@ -1543,10 +1583,14 @@ class _add_dataState extends State<add_data> {
                                                     );
                                                     return;
                                                   }
-                                                  final int weight = int.tryParse(_weight.text) ?? 0;
-                                                  final int volWeight = int.tryParse(_volweight.text) ?? 0;
-                                                  final int rate = int.tryParse(_rate.text) ?? 0;
-                                                  _amount = (volWeight == 0 ? weight : volWeight) * rate;
+                                                  final double weight = double.tryParse(_weight.text) ?? 0;
+                                                  final double volWeight = double.tryParse(_volweight.text) ?? 0;
+                                                  final double rate = double.tryParse(_rate.text) ?? 0;
+                                                  if (volWeight == 0) {
+                                                    _amount = weight * rate;
+                                                  } else {
+                                                    _amount = volWeight * rate;
+                                                  }
                                                 });
                                               },
                                               child: Padding(
