@@ -12,6 +12,7 @@ class CommonTextField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType keyboardType;
   final FocusNode focusNode;
+  final Function(String)? onChanged;
 
   const CommonTextField({
     super.key,
@@ -19,6 +20,7 @@ class CommonTextField extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     this.keyboardType = TextInputType.text,
+    this.onChanged,
   });
 
   @override
@@ -28,6 +30,7 @@ class CommonTextField extends StatelessWidget {
       focusNode: focusNode,
       keyboardType: keyboardType,
       textInputAction: TextInputAction.next,
+      onChanged: onChanged,
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
@@ -88,7 +91,7 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
   final FocusNode _senderFocus = FocusNode();
   final FocusNode _submitFocus = FocusNode();
 
-  int _amount = 0;
+  double _amount = 0.0;
   String selected_status = 'Unpaid';
   List<String> senderOptions = [];
   String? selectedOption;
@@ -204,6 +207,24 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
+    // ===== Extract number (remove R prefix if present) =====
+    String podInput = _podNumber.text.trim().toUpperCase();
+
+    // Remove "R" if user already typed it
+    if (podInput.startsWith("R")) {
+      podInput = podInput.substring(1);
+    }
+
+    // Parse the remaining number
+    int? podNum = int.tryParse(podInput);
+
+    if (podNum == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Please enter valid POD number (numbers only)")),
+      );
+      return;
+    }
+
     if (_dateDay.text.isEmpty || _dateMonth.text.isEmpty || _dateYear.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Please fill all date fields")),
@@ -230,19 +251,24 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
       return;
     }
 
-    int? weight = int.tryParse(_weight.text.trim());
-    int? rate = int.tryParse(_rate.text.trim());
-    int? podNum = int.tryParse(_podNumber.text.trim());
+    // ===== Parse as doubles instead of integers =====
+    double? weight = double.tryParse(_weight.text.trim());
+    double? rate = double.tryParse(_rate.text.trim());
 
-    if (weight == null || rate == null || podNum == null) {
+    if (weight == null || rate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Please enter valid values")),
+        SnackBar(content: Text("⚠️ Please enter valid decimal values")),
       );
       return;
     }
 
-    final int volWeight = int.tryParse(_volweight.text) ?? 0;
-    _amount = (volWeight == 0 ? weight : volWeight) * rate;
+    // ===== Parse volumetric weight as double =====
+    final double volWeight = double.tryParse(_volweight.text) ?? 0;
+    if (volWeight == 0) {
+      _amount = weight * rate;
+    } else {
+      _amount = volWeight * rate;
+    }
 
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
@@ -264,19 +290,23 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
 
     var url = Uri.parse("${ApiConfig.baseUrl}/submitpod-manual");
 
+    // ===== UPDATED: Send POD number WITHOUT R prefix =====
+    // User enters: R12345 or 12345
+    // Backend receives: 12345 (just the number)
+
     var response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        "podNumber": podNum,
+        "podNumber": podNum,  // Send WITHOUT R prefix (just the number)
         "date1": formattedDate,
         "from1": _from.text,
         "to1": _to.text,
         "doc": selected_doc,
         "origin": _origin,
         "destination": _destination,
-        "weight": weight,
-        "vol_weight": _volweight.text.isEmpty ? null : int.tryParse(_volweight.text),
+        "weight": double.tryParse(_weight.text) ?? 0,
+        "vol_weight": _volweight.text.isEmpty ? null : double.tryParse(_volweight.text),
         "pieces": int.tryParse(_piece.text) ?? 0,
         "amount": _amount,
         "status1": selected_status,
@@ -289,7 +319,7 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("✅ POD #${data['podNumber']} submitted successfully"),
+          content: Text("✅ POD ${data['podNumber']} submitted successfully"),
           duration: Duration(seconds: 2),
         ),
       );
@@ -393,11 +423,44 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                               label: 'POD Number',
                               child: SizedBox(
                                 height: 52,
-                                child: CommonTextField(
-                                  hintText: 'Enter POD number',
+                                child: TextField(
                                   controller: _podNumber,
-                                  keyboardType: TextInputType.number,
                                   focusNode: _podNumberFocus,
+                                  keyboardType: TextInputType.number,
+                                  textInputAction: TextInputAction.next,
+                                  onChanged: (value) {
+                                    // ===== UPDATED: Remove R completely (don't show it in field) =====
+                                    // Remove any R or r that user types
+                                    String cleanValue = value.replaceAll('R', '').replaceAll('r', '').trim();
+
+                                    // Update the field with clean number only
+                                    if (cleanValue != _podNumber.text) {
+                                      _podNumber.text = cleanValue;
+                                      _podNumber.selection = TextSelection.fromPosition(
+                                        TextPosition(offset: _podNumber.text.length),
+                                      );
+                                    }
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: '12345',
+                                    helperText: 'Enter POD number (numbers only, e.g., 12345)',
+                                    helperStyle: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                    ),
+                                    prefixIcon: Icon(Icons.inventory_2, color: Colors.grey.shade600, size: 20),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                  ),
                                 ),
                               ),
                             ),
@@ -677,10 +740,22 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                   child: _buildFormSection(
                                     label: 'Weight (kg)',
                                     child: CommonTextField(
-                                      hintText: 'Enter weight',
+                                      hintText: 'e.g., 10.5',
                                       controller: _weight,
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       focusNode: _weightFocus,
+                                      onChanged: (value) {
+                                        // Limit to 2 decimal places
+                                        if (value.contains('.')) {
+                                          List<String> parts = value.split('.');
+                                          if (parts[1].length > 2) {
+                                            _weight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                            _weight.selection = TextSelection.fromPosition(
+                                              TextPosition(offset: _weight.text.length),
+                                            );
+                                          }
+                                        }
+                                      },
                                     ),
                                   ),
                                 ),
@@ -689,10 +764,22 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                   child: _buildFormSection(
                                     label: 'Vol. Weight (kg)',
                                     child: CommonTextField(
-                                      hintText: 'Enter volumetric weight',
+                                      hintText: 'e.g., 8.75',
                                       controller: _volweight,
                                       focusNode: _volWeightFocus,
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      onChanged: (value) {
+                                        // Limit to 2 decimal places
+                                        if (value.contains('.')) {
+                                          List<String> parts = value.split('.');
+                                          if (parts[1].length > 2) {
+                                            _volweight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                            _volweight.selection = TextSelection.fromPosition(
+                                              TextPosition(offset: _volweight.text.length),
+                                            );
+                                          }
+                                        }
+                                      },
                                     ),
                                   ),
                                 ),
@@ -716,17 +803,29 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                 SizedBox(width: 16),
                                 Expanded(
                                   child: _buildFormSection(
-                                    label: 'Rate (₹)',
+                                    label: 'Rate (₹/kg)',
                                     child: TextField(
                                       controller: _rate,
                                       focusNode: _rateFocus,
-                                      keyboardType: TextInputType.number,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                                       textInputAction: TextInputAction.next,
+                                      onChanged: (value) {
+                                        // Limit to 2 decimal places
+                                        if (value.contains('.')) {
+                                          List<String> parts = value.split('.');
+                                          if (parts[1].length > 2) {
+                                            _rate.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                            _rate.selection = TextSelection.fromPosition(
+                                              TextPosition(offset: _rate.text.length),
+                                            );
+                                          }
+                                        }
+                                      },
                                       onSubmitted: (_) {
                                         FocusScope.of(context).requestFocus(_senderFocus);
                                       },
                                       decoration: InputDecoration(
-                                        hintText: 'Enter rate',
+                                        hintText: 'e.g., 50.75',
                                         hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
@@ -766,14 +865,15 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                             return;
                                           }
 
-                                          final int weight = int.tryParse(_weight.text) ?? 0;
-                                          final int volWeight = int.tryParse(_volweight.text) ?? 0;
-                                          final int rate = int.tryParse(_rate.text) ?? 0;
+                                          // ===== Parse as doubles =====
+                                          final double weight = double.tryParse(_weight.text) ?? 0;
+                                          final double volWeight = double.tryParse(_volweight.text) ?? 0;
+                                          final double rate = double.tryParse(_rate.text) ?? 0;
 
                                           if (volWeight == 0) {
-                                            _amount = weight * rate;
+                                            _amount = (weight * rate);
                                           } else {
-                                            _amount = volWeight * rate;
+                                            _amount = (volWeight * rate);
                                           }
                                         });
                                       },
@@ -798,7 +898,7 @@ class _manual_pod_entryState extends State<manual_pod_entry> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      '₹${_amount.toString()}',
+                                      '₹${_amount.toStringAsFixed(2)}',
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,

@@ -20,6 +20,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:app_settings/app_settings.dart';
 
 class PreviousManualPodData extends StatefulWidget {
   const PreviousManualPodData({super.key});
@@ -93,8 +95,11 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
             pod.from.toLowerCase().contains(fromController.text.toLowerCase());
         bool matchesTo = toController.text.isEmpty ||
             pod.to.toLowerCase().contains(toController.text.toLowerCase());
+
         bool matchesID = idController.text.isEmpty ||
-            pod.podNumber.toString().contains(idController.text);
+            pod.podNumber.toString().contains(idController.text) ||
+            pod.podNumber.toString().replaceAll('R', '').contains(idController.text);
+
         bool matchesStatus =
             selectedStatus == null || selectedStatus == 'All' || pod.status == selectedStatus;
 
@@ -234,8 +239,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       print('Warning: Could not set column widths: $e');
     }
 
+    // ===== UPDATED: Changed font to Calibri throughout =====
     xl.CellStyle companyHeader({int size = 14}) => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: size,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -246,7 +252,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle subHeader({int size = 11}) => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: size,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -256,7 +262,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle addressLabel() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
@@ -264,14 +270,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle addressText() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
       verticalAlign: xl.VerticalAlign.Top,
     );
 
     xl.CellStyle tableHeader() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Center,
@@ -283,7 +289,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle dataCell() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Center,
       verticalAlign: xl.VerticalAlign.Center,
@@ -294,7 +300,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
 
     xl.CellStyle dataCellLeft() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Left,
       verticalAlign: xl.VerticalAlign.Center,
@@ -304,36 +310,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
     );
 
-    xl.CellStyle billBorderLeft() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Left,
-      verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
-    xl.CellStyle billBorderRight() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Left,
-      verticalAlign: xl.VerticalAlign.Center,
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
-    xl.CellStyle billBorderBottom() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
-      bold: false,
-      fontSize: 10,
-      horizontalAlign: xl.HorizontalAlign.Right,
-      verticalAlign: xl.VerticalAlign.Center,
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-    );
-
     xl.CellStyle plain({xl.HorizontalAlign align = xl.HorizontalAlign.Left, bool bold = false}) =>
         xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+          fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
           bold: bold,
           fontSize: 10,
           horizontalAlign: align,
@@ -342,45 +321,40 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
           rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
         );
 
+    // ===== UPDATED: Clean footer borders - labels have NO borders, only values have right border =====
     xl.CellStyle footerLabel() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      // NO BORDERS on labels
     );
 
     xl.CellStyle footerValue() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 11,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      topBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium), // Only right border
     );
 
     xl.CellStyle footerValueBold() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       bold: true,
       fontSize: 12,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
-      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium), // Only right border
     );
 
     xl.CellStyle signatureStyle() => xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+      bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
 
     void setText(int col, int row, String value, xl.CellStyle style) {
@@ -423,8 +397,9 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     mergeRange(0, 5, 1, 5);
     setText(0, 5, 'To, ', plain());
 
+    // ===== UPDATED: Align Bill No. to the right =====
     mergeRange(6, 5, 7, 5);
-    setText(6, 5, 'BILL NO. :', plain());
+    setText(6, 5, 'BILL NO. :', plain(align: xl.HorizontalAlign.Right));
 
     final List<String> toLines = toAddress.split('\n');
     for (int i = 0; i < 4; i++) {
@@ -437,7 +412,8 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     setText(6, 6, 'Date: $today', plain(bold: true, align: xl.HorizontalAlign.Right));
 
     const int headerRowIdx = 10;
-    const List<String> cols = ['Sr. No.', 'Date', 'POD No.', 'From', 'To', 'Weight', 'BAG', 'Amount'];
+    // ===== UPDATED: Changed columns from "From, To" to "Origin, Destination" =====
+    const List<String> cols = ['Sr. No.', 'Date', 'POD No.', 'Origin', 'Destination', 'Weight', 'BAG', 'Amount'];
     for (int c = 0; c < cols.length; c++) {
       setText(c, headerRowIdx, cols[c], tableHeader());
     }
@@ -449,9 +425,10 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
       setInt(0, r, i + 1, dataCell());
       setText(1, r, pod.formattedDate, dataCell());
-      setInt(2, r, pod.podNumber, dataCell());
-      setText(3, r, pod.from, dataCellLeft());
-      setText(4, r, pod.to, dataCellLeft());
+      setText(2, r, pod.podNumber.toString(), dataCell());
+      // ===== UPDATED: Use origin and destination instead of from and to =====
+      setText(3, r, pod.origin, dataCellLeft());
+      setText(4, r, pod.destination, dataCellLeft());
       setInt(5, r, int.tryParse(pod.weight) ?? 0, dataCell());
       setInt(6, r, int.tryParse(pod.pieces) ?? 0, dataCell());
       setInt(7, r, int.tryParse(pod.amount) ?? 0, dataCell());
@@ -465,17 +442,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
       totalAmount += int.tryParse(pod.amount) ?? 0;
     }
 
-    double cgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
-    double sgstAmountDouble = (totalAmount.toDouble() * 9) / 100;
+    // ===== UPDATED: Calculate CGST and SGST without rounding =====
+    double cgstAmount = (totalAmount * 9) / 100;
+    double sgstAmount = (totalAmount * 9) / 100;
 
-    int cgstAmount = cgstAmountDouble.ceil();
-    int sgstAmount = sgstAmountDouble.ceil();
-
-    double subtotalDouble = totalAmount.toDouble() + cgstAmount.toDouble() + sgstAmount.toDouble();
-    int subtotalRounded = subtotalDouble.ceil();
-    int roundupAmount = subtotalRounded - (totalAmount + cgstAmount + sgstAmount);
-
-    int totalFinal = totalAmount + cgstAmount + sgstAmount + roundupAmount;
+    // ===== UPDATED: Only round the total amount =====
+    double subtotal = totalAmount + cgstAmount + sgstAmount;
+    int totalAmountRounded = subtotal.round();
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Amount', footerLabel());
@@ -484,41 +457,51 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'CGST 9%', footerLabel());
-    setInt(7, fRow, cgstAmount, footerValue());
+    // ===== UPDATED: Display CGST as decimal =====
+    final cell1 = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: fRow));
+    cell1.value = xl.DoubleCellValue(cgstAmount);
+    cell1.cellStyle = footerValue();
     fRow++;
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'SGST 9%', footerLabel());
-    setInt(7, fRow, sgstAmount, footerValue());
-    fRow++;
-
-    mergeRange(5, fRow, 6, fRow);
-    setText(5, fRow, 'Roundup', footerLabel());
-    setInt(7, fRow, roundupAmount, footerValue());
+    // ===== UPDATED: Display SGST as decimal =====
+    final cell2 = sheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 7, rowIndex: fRow));
+    cell2.value = xl.DoubleCellValue(sgstAmount);
+    cell2.cellStyle = footerValue();
     fRow++;
 
     mergeRange(5, fRow, 6, fRow);
     setText(5, fRow, 'Total Amount',
         xl.CellStyle(
-          fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+          fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
           bold: true,
           fontSize: 12,
           horizontalAlign: xl.HorizontalAlign.Right,
           verticalAlign: xl.VerticalAlign.Center,
+          leftBorder: xl.Border(borderStyle: xl.BorderStyle.Thin),
+          rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+          topBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
+          bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
         ));
-    setInt(7, fRow, totalFinal, footerValueBold());
+    setInt(7, fRow, totalAmountRounded, footerValueBold());
     fRow += 2;
 
-    setText(7, fRow, 'Yours Truly,', signatureStyle());
+    setText(7, fRow, 'Yours Truly,', xl.CellStyle(
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
+      fontSize: 10,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      verticalAlign: xl.VerticalAlign.Center,
+      // NO BORDERS
+    ));
     fRow++;
 
     final lastRow = fRow;
     final lastSignatureStyle = xl.CellStyle(
-      fontFamily: xl.getFontFamily(xl.FontFamily.Arial),
+      fontFamily: xl.getFontFamily(xl.FontFamily.Calibri),
       fontSize: 10,
       horizontalAlign: xl.HorizontalAlign.Right,
       verticalAlign: xl.VerticalAlign.Center,
-      leftBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       rightBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
       bottomBorder: xl.Border(borderStyle: xl.BorderStyle.Medium),
     );
@@ -604,22 +587,196 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
 
   Future<bool> requestStoragePermission() async {
     if (Platform.isAndroid) {
-      if (await Permission.storage.isGranted) return true;
-      var storage = await Permission.storage.request();
-      return storage.isGranted;
+      try {
+        final deviceInfo = DeviceInfoPlugin();
+        final androidInfo = await deviceInfo.androidInfo;
+        final androidVersion = androidInfo.version.sdkInt;
+
+        print('📱 Android SDK Version: $androidVersion');
+
+        if (androidVersion >= 33) {
+          print('🔄 Requesting Android 13+ permissions...');
+
+          var manageExternal = await Permission.manageExternalStorage.request();
+
+          if (manageExternal.isGranted) {
+            print('✅ MANAGE_EXTERNAL_STORAGE granted (Full access)');
+            return true;
+          }
+
+          if (manageExternal.isDenied) {
+            print('⚠️ Trying scoped storage approach...');
+            var photos = await Permission.photos.request();
+            var videos = await Permission.videos.request();
+
+            if (photos.isGranted || videos.isGranted) {
+              print('✅ Scoped storage granted (Photos/Videos)');
+              return true;
+            }
+          }
+
+          if (manageExternal.isPermanentlyDenied) {
+            print('❌ Permission permanently denied');
+            _showStoragePermissionDialog();
+            return false;
+          }
+        } else if (androidVersion >= 21) {
+          print('🔄 Requesting Android 6-12 permissions...');
+
+          var storage = await Permission.storage.request();
+
+          if (storage.isGranted) {
+            print('✅ WRITE_EXTERNAL_STORAGE granted');
+            return true;
+          }
+
+          if (storage.isDenied) {
+            print('⚠️ Storage permission denied (user can retry)');
+            _showStoragePermissionDialog();
+            return false;
+          }
+
+          if (storage.isPermanentlyDenied) {
+            print('❌ Storage permission permanently denied');
+            _showStoragePermissionDialog();
+            return false;
+          }
+        } else {
+          print('✅ Android 5 and below - no runtime permissions needed');
+          return true;
+        }
+
+      } catch (e) {
+        print('❌ Error checking permissions: $e');
+        _showErrorSnackbar('Permission error: $e');
+        return false;
+      }
     }
+
+    print('✅ Non-Android platform - permissions granted');
     return true;
+  }
+
+  void _showStoragePermissionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Row(
+          children: [
+            Icon(Icons.folder_off, color: Colors.red, size: 24),
+            const SizedBox(width: 8),
+            const Text('Storage Permission Required'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'This app needs permission to save Excel files to your Downloads folder.',
+                style: TextStyle(fontSize: 14, height: 1.5),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'How to fix:',
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildStepText('1', 'Go to Settings'),
+                    _buildStepText('2', 'Tap "Apps" or "Application Manager"'),
+                    _buildStepText('3', 'Find and tap "Rajpurohit"'),
+                    _buildStepText('4', 'Tap "Permissions" or "App Permissions"'),
+                    _buildStepText('5', 'Tap "Files and media" or "Storage"'),
+                    _buildStepText('6', 'Select "Allow" (or "Allow all files" if available)'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info, color: Colors.blue, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: const Text(
+                        'After granting permission, return to the app and try exporting again.',
+                        style: TextStyle(fontSize: 12, color: Colors.blue),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              openAppSettings();
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xff2a3368),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            icon: const Icon(Icons.settings, size: 18),
+            label: const Text('Open Settings'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepText(String step, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        '$step. $text',
+        style: const TextStyle(fontSize: 12, height: 1.4),
+      ),
+    );
   }
 
   void _showErrorSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
   void _showSuccessSnackbar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 
@@ -697,7 +854,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                       child: pw.Row(children: [
                         pw.Text('AWB no. - '),
-                        pw.Text('${pod.podNumber}'),
+                        pw.Text(pod.podNumber.toString()),
                       ]),
                     ),
                   ]),
@@ -877,7 +1034,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         builder: (_) => Scaffold(
           appBar: AppBar(
             backgroundColor: const Color(0xff2a3368),
-            title: Text('POD-${pod.podNumber}',
+            title: Text(pod.podNumber.toString(),
                 style: const TextStyle(color: Colors.white)),
             iconTheme: const IconThemeData(color: Colors.white),
           ),
@@ -888,7 +1045,14 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
     );
   }
 
-  // Improved Search Field Widget
+  int _extractPodNumber(dynamic podNumber) {
+    String str = podNumber.toString();
+    if (str.startsWith('R')) {
+      str = str.substring(1);
+    }
+    return int.tryParse(str) ?? 0;
+  }
+
   Widget buildSearchField({
     required TextEditingController controller,
     required String label,
@@ -971,7 +1135,7 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               return Colors.white;
             }),
             cells: [
-              DataCell(Text("POD-${pod.podNumber}", style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
+              DataCell(Text(pod.podNumber.toString(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12))),
               DataCell(Text(pod.formattedDate, style: const TextStyle(fontSize: 12))),
               DataCell(Text(pod.from, style: const TextStyle(fontSize: 12))),
               DataCell(Text(pod.to, style: const TextStyle(fontSize: 12))),
@@ -992,11 +1156,12 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 16),
                         tooltip: 'Edit Vol Weight',
                         onPressed: () {
+                          int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditVolWeightManualPage(
-                                podId: pod.podNumber,
+                                podId: podId,
                                 currentVolWeight: pod.volWeight,
                                 weight: int.parse(pod.weight),
                               ),
@@ -1037,11 +1202,12 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                         icon: const Icon(Icons.edit_outlined, color: Colors.purple, size: 16),
                         tooltip: 'Edit Payment Status',
                         onPressed: () {
+                          int podId = _extractPodNumber(pod.podNumber);
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => EditPaymentStatusManualPage(
-                                podId: pod.podNumber,
+                                podId: podId,
                                 currentStatus: pod.status,
                               ),
                             ),
@@ -1101,7 +1267,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              // Filter Cards
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -1118,15 +1283,13 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 16),
 
-                      // POD No. Search
                       buildSearchField(
                         controller: idController,
-                        label: 'Search by POD No.',
+                        label: 'Search by POD No. (e.g., R123 or 123)',
                         onChanged: filterTable,
                       ),
                       const SizedBox(height: 12),
 
-                      // Origin & Destination
                       Row(
                         children: [
                           buildSearchField(
@@ -1144,7 +1307,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 12),
 
-                      // From & To
                       Row(
                         children: [
                           buildSearchField(
@@ -1162,7 +1324,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Status & Date Filters - Properly wrapped
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
@@ -1221,7 +1382,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               ),
               const SizedBox(height: 20),
 
-              // Records Count
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -1231,7 +1391,6 @@ class _PreviousManualPodDataState extends State<PreviousManualPodData> {
               ),
               const SizedBox(height: 8),
 
-              // Table with proper constraints
               Card(
                 elevation: 1,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

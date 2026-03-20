@@ -7,13 +7,12 @@ import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey, KeyDownEvent;
+import 'package:flutter/services.dart' show rootBundle, LogicalKeyboardKey;
 import 'package:rajpurohit/widgets/watermarked_scaffold.dart';
-
 import 'config/api.dart';
 
 class PodData {
-  final int podNumber;
+  final String podNumber;
   final String date;
   final String formattedDate;
   final String from;
@@ -21,10 +20,10 @@ class PodData {
   final String origin;
   final String destination;
   final String doc;
-  final int weight;
-  final int? volWeight;
+  final double weight;
+  final double? volWeight;
   final int pieces;
-  final int amount;
+  final double amount;
   final String status;
   final String sender;
 
@@ -51,6 +50,8 @@ class CommonTextField extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType keyboardType;
   final FocusNode focusNode;
+  final IconData? prefixIcon;
+  final Function(String)? onChanged;
 
   const CommonTextField({
     super.key,
@@ -58,6 +59,8 @@ class CommonTextField extends StatelessWidget {
     required this.controller,
     required this.focusNode,
     this.keyboardType = TextInputType.text,
+    this.prefixIcon,
+    this.onChanged,
   });
 
   @override
@@ -67,22 +70,223 @@ class CommonTextField extends StatelessWidget {
       focusNode: focusNode,
       keyboardType: keyboardType,
       textInputAction: TextInputAction.next,
+      onChanged: onChanged,
+      style: const TextStyle(color: Color(0xff2a3368), fontSize: 14),
       decoration: InputDecoration(
         hintText: hintText,
-        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+        hintStyle: TextStyle(color: Colors.grey.shade400),
+        prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: Colors.grey.shade400) : null,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.grey, width: 1.5),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
         ),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        filled: true,
+        fillColor: Colors.grey.withOpacity(0.05),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+    );
+  }
+}
+
+class AutocompleteTextField extends StatefulWidget {
+  final String hintText;
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final FocusNode? nextFocusNode;
+  final IconData? prefixIcon;
+  final List<String> suggestions;
+  final Function(String)? onSelected;
+
+  const AutocompleteTextField({
+    super.key,
+    required this.hintText,
+    required this.controller,
+    required this.focusNode,
+    this.nextFocusNode,
+    this.prefixIcon,
+    required this.suggestions,
+    this.onSelected,
+  });
+
+  @override
+  State<AutocompleteTextField> createState() => _AutocompleteTextFieldState();
+}
+
+class _AutocompleteTextFieldState extends State<AutocompleteTextField> {
+  List<String> _filteredSuggestions = [];
+  bool _showSuggestions = false;
+  int _selectedIndex = -1;
+  late FocusNode _keyboardListenerFocus;
+
+  @override
+  void initState() {
+    super.initState();
+    _keyboardListenerFocus = FocusNode();
+    widget.focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _keyboardListenerFocus.dispose();
+    widget.focusNode.removeListener(_onFocusChange);
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!widget.focusNode.hasFocus) {
+      setState(() {
+        _showSuggestions = false;
+        _selectedIndex = -1;
+      });
+    }
+  }
+
+  void _filterSuggestions(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredSuggestions = [];
+        _showSuggestions = false;
+        _selectedIndex = -1;
+      } else {
+        _filteredSuggestions = widget.suggestions
+            .where((suggestion) =>
+            suggestion.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+        _showSuggestions = _filteredSuggestions.isNotEmpty;
+        _selectedIndex = -1;
+      }
+    });
+  }
+
+  void _selectSuggestion(String suggestion) {
+    widget.controller.text = suggestion;
+    setState(() {
+      _showSuggestions = false;
+      _selectedIndex = -1;
+    });
+    widget.onSelected?.call(suggestion);
+
+    if (widget.nextFocusNode != null) {
+      Future.delayed(const Duration(milliseconds: 100), () {
+        FocusScope.of(context).requestFocus(widget.nextFocusNode!);
+      });
+    }
+  }
+
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (!_showSuggestions || _filteredSuggestions.isEmpty) return;
+
+    if (event.isKeyPressed(LogicalKeyboardKey.arrowDown)) {
+      setState(() {
+        _selectedIndex = (_selectedIndex + 1) % _filteredSuggestions.length;
+      });
+    } else if (event.isKeyPressed(LogicalKeyboardKey.arrowUp)) {
+      setState(() {
+        _selectedIndex = (_selectedIndex - 1) < 0
+            ? _filteredSuggestions.length - 1
+            : _selectedIndex - 1;
+      });
+    } else if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
+      if (_selectedIndex >= 0 && _selectedIndex < _filteredSuggestions.length) {
+        _selectSuggestion(_filteredSuggestions[_selectedIndex]);
+      }
+    } else if (event.isKeyPressed(LogicalKeyboardKey.escape)) {
+      setState(() {
+        _showSuggestions = false;
+        _selectedIndex = -1;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RawKeyboardListener(
+      focusNode: _keyboardListenerFocus,
+      onKey: _handleKeyEvent,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: widget.controller,
+            focusNode: widget.focusNode,
+            onChanged: _filterSuggestions,
+            style: const TextStyle(color: Color(0xff2a3368), fontSize: 14),
+            decoration: InputDecoration(
+              hintText: widget.hintText,
+              hintStyle: TextStyle(color: Colors.grey.shade400),
+              prefixIcon: widget.prefixIcon != null
+                  ? Icon(widget.prefixIcon, color: Colors.grey.shade400)
+                  : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Colors.grey, width: 1.5),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
+              ),
+              filled: true,
+              fillColor: Colors.grey.withOpacity(0.05),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+          if (_showSuggestions && _filteredSuggestions.isNotEmpty)
+            Container(
+              constraints: const BoxConstraints(maxHeight: 220),
+              margin: const EdgeInsets.only(top: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300, width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: ListView.builder(
+                  itemCount: _filteredSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final suggestion = _filteredSuggestions[index];
+                    final isSelected = index == _selectedIndex;
+
+                    return Container(
+                      color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.transparent,
+                      child: ListTile(
+                        dense: true,
+                        hoverColor: Colors.blue.withOpacity(0.1),
+                        title: Text(
+                          suggestion,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: isSelected ? const Color(0xff2a3368) : Colors.black87,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
+                        onTap: () => _selectSuggestion(suggestion),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -114,7 +318,7 @@ class _add_dataState extends State<add_data> {
   final FocusNode _senderFocus = FocusNode();
   final FocusNode _submitFocus = FocusNode();
 
-  int _amount = 0;
+  double _amount = 0.0;
   String selected_status = 'Unpaid';
   List<String> senderOptions = [];
   String? selectedOption;
@@ -221,7 +425,7 @@ class _add_dataState extends State<add_data> {
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: Text('Invoice Preview')),
+          appBar: AppBar(title: const Text('Invoice Preview')),
           body: PdfPreview(
             build: (format) => _generatePdf(format, pod, fetchedAddress),
           ),
@@ -285,7 +489,6 @@ class _add_dataState extends State<add_data> {
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(width: 1),
                     ),
-
                     child: pw.Column(
                       children: [
                         pw.Container(
@@ -318,7 +521,7 @@ class _add_dataState extends State<add_data> {
                           child: pw.Row(
                             children: [
                               pw.Text('AWB no. - '),
-                              pw.Text('${pod.podNumber}'),
+                              pw.Text(pod.podNumber),
                             ],
                           ),
                         ),
@@ -337,7 +540,6 @@ class _add_dataState extends State<add_data> {
                         pw.Container(
                           width: 140,
                           height: 20,
-
                           decoration: pw.BoxDecoration(
                             border: pw.Border.all(width: 1),
                             color: PdfColor.fromInt(0xff2a3368),
@@ -587,7 +789,7 @@ class _add_dataState extends State<add_data> {
                           border: pw.Border.all(width: 1),
                         ),
                         padding: const pw.EdgeInsets.all(4),
-                        child: pw.Text('${pod.amount}'),
+                        child: pw.Text('${pod.amount.toStringAsFixed(2)}'),
                       ),
                     ],
                   ),
@@ -731,23 +933,27 @@ class _add_dataState extends State<add_data> {
     print("🟡 SUBMIT BUTTON PRESSED");
     if (_weight.text.isEmpty || _rate.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Please fill all required fields")),
+        const SnackBar(content: Text("⚠️ Please fill all required fields")),
       );
       return;
     }
 
-    int? weight = int.tryParse(_weight.text.trim());
-    int? rate = int.tryParse(_rate.text.trim());
+    double? weight = double.tryParse(_weight.text.trim());
+    double? rate = double.tryParse(_rate.text.trim());
 
     if (weight == null || rate == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("⚠️ Please enter valid Values")));
+      ).showSnackBar(const SnackBar(content: Text("⚠️ Please enter valid decimal values")));
       return;
     }
 
-    final int volWeight = int.tryParse(_volweight.text) ?? 0;
-    _amount = (volWeight == 0 ? weight : volWeight) * rate;
+    final double volWeight = double.tryParse(_volweight.text) ?? 0;
+    if (volWeight == 0) {
+      _amount = weight * rate;
+    } else {
+      _amount = volWeight * rate;
+    }
 
     if (_from.text.trim().isEmpty ||
         _to.text.trim().isEmpty ||
@@ -760,7 +966,7 @@ class _add_dataState extends State<add_data> {
         selectedOption == null ||
         selectedOption!.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Please fill all required fields")),
+        const SnackBar(content: Text("⚠️ Please fill all required fields")),
       );
       return;
     }
@@ -776,12 +982,12 @@ class _add_dataState extends State<add_data> {
         "doc": selected_doc,
         "origin": _origin,
         "destination": _destination,
-        "weight": int.tryParse(_weight.text) ?? 0,
+        "weight": double.tryParse(_weight.text) ?? 0,
         "vol_weight": _volweight.text.isEmpty
             ? null
-            : int.tryParse(_volweight.text),
+            : double.tryParse(_volweight.text),
         "pieces": int.tryParse(_piece.text) ?? 0,
-        "amount": int.tryParse(_amount.toString()) ?? 0,
+        "amount": _amount,
         "status1": selected_status,
         "sender": selectedOption,
       }),
@@ -790,8 +996,14 @@ class _add_dataState extends State<add_data> {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
 
+      // Backend should return podNumber - format it with R if needed for display
+      String podNumberDisplay = data['podNumber'].toString();
+      if (!podNumberDisplay.startsWith('R')) {
+        podNumberDisplay = 'R$podNumberDisplay';
+      }
+
       PodData pod = PodData(
-        podNumber: data['podNumber'],
+        podNumber: podNumberDisplay,
         date: data['date1'],
         formattedDate: DateFormat(
           'd-MM-yyyy',
@@ -801,10 +1013,10 @@ class _add_dataState extends State<add_data> {
         origin: data['origin'],
         destination: data['destination'],
         doc: data['doc'],
-        weight: data['weight'],
-        volWeight: data['vol_weight'],
+        weight: (data['weight'] as num).toDouble(),
+        volWeight: data['vol_weight'] != null ? (data['vol_weight'] as num).toDouble() : null,
         pieces: data['pieces'],
-        amount: data['amount'],
+        amount: (data['amount'] as num).toDouble(),
         status: data['status1'],
         sender: data['sender'],
       );
@@ -814,11 +1026,11 @@ class _add_dataState extends State<add_data> {
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Data submitted successfully")));
+      ).showSnackBar(SnackBar(content: Text("✅ POD $podNumberDisplay submitted successfully")));
     } else {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("Failed to submit data")));
+      ).showSnackBar(const SnackBar(content: Text("Failed to submit data")));
       print("Status code: ${response.statusCode}");
       print("Response body: ${response.body}");
     }
@@ -839,210 +1051,182 @@ class _add_dataState extends State<add_data> {
     super.dispose();
   }
 
+  Widget _buildFormSection(String title, Widget child) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 16,
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: Color(0xff2a3368),
+            ),
+          ),
+          const SizedBox(height: 18),
+          child,
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return WatermarkedScaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xff2a3368),
-        title: Text('New Data', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w600)),
+        backgroundColor: const Color(0xff2a3368),
+        title: const Text(
+          'New Data',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+          ),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
-        elevation: 2,
+        elevation: 0,
+        centerTitle: true,
       ),
       drawer: sidebar(),
       body: Container(
-        color: Colors.grey.shade50,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              const Color(0xff2a3368).withOpacity(0.05),
+              Colors.blue.withOpacity(0.02),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: SingleChildScrollView(
           scrollDirection: Axis.vertical,
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: 900),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header
-                    Padding(
-                      padding: EdgeInsets.only(bottom: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Shipment Details',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xff2a3368),
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Container(
-                            width: 60,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade600,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Form Card
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      color: Colors.white,
-                      child: Padding(
-                        padding: EdgeInsets.all(28),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+          child: Center(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: SizedBox(
+                width: 900,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Sender & Receiver Section
+                      _buildFormSection(
+                        '👤 Sender & Receiver',
+                        Row(
                           children: [
-                            // From Section
-                            _buildFormSection(
-                              label: 'From',
-                              child: SizedBox(
-                                height: 52,
-                                child: Autocomplete<String>(
-                                  focusNode: _fromFocus,
-                                  textEditingController: _from,
-                                  optionsBuilder: (TextEditingValue textEditingValue) {
-                                    if (textEditingValue.text.isEmpty) {
-                                      return const Iterable<String>.empty();
-                                    }
-                                    return nameSuggestions.where(
-                                          (option) => option
-                                          .toLowerCase()
-                                          .contains(textEditingValue.text.toLowerCase()),
-                                    );
-                                  },
-                                  onSelected: (String selection) {
-                                    _from.text = selection;
-                                    FocusScope.of(context).requestFocus(_toFocus);
-                                  },
-                                  fieldViewBuilder: (
-                                      context,
-                                      controller,
-                                      focusNode,
-                                      onEditingComplete,
-                                      ) {
-                                    return TextField(
-                                      controller: controller,
-                                      focusNode: focusNode,
-                                      textInputAction: TextInputAction.done,
-                                      onSubmitted: (value) {
-                                        onEditingComplete();
-                                        FocusScope.of(context).requestFocus(_toFocus);
-                                      },
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter sender name',
-                                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
-                                        ),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                      ),
-                                    );
-                                  },
-                                ),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'From:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  AutocompleteTextField(
+                                    hintText: 'Enter sender name',
+                                    controller: _from,
+                                    focusNode: _fromFocus,
+                                    nextFocusNode: _toFocus,
+                                    prefixIcon: Icons.person,
+                                    suggestions: nameSuggestions,
+                                    onSelected: (_) {},
+                                  ),
+                                ],
                               ),
                             ),
-
-                            // To Section
-                            _buildFormSection(
-                              label: 'To',
-                              child: SizedBox(
-                                height: 52,
-                                child: Autocomplete<String>(
-                                  focusNode: _toFocus,
-                                  textEditingController: _to,
-                                  optionsBuilder: (TextEditingValue textEditingValue) {
-                                    if (textEditingValue.text.isEmpty) {
-                                      return const Iterable<String>.empty();
-                                    }
-                                    return nameSuggestions.where(
-                                          (option) => option
-                                          .toLowerCase()
-                                          .contains(textEditingValue.text.toLowerCase()),
-                                    );
-                                  },
-                                  onSelected: (String selection) {
-                                    _to.text = selection;
-                                    FocusScope.of(context).requestFocus(_originFocus);
-                                  },
-                                  fieldViewBuilder: (
-                                      context,
-                                      controller,
-                                      focusNode,
-                                      onEditingComplete,
-                                      ) {
-                                    return TextField(
-                                      controller: controller,
-                                      focusNode: focusNode,
-                                      textInputAction: TextInputAction.done,
-                                      onSubmitted: (value) {
-                                        onEditingComplete();
-                                        FocusScope.of(context).requestFocus(_originFocus);
-                                      },
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter recipient name',
-                                        hintStyle: TextStyle(color: Colors.grey.shade500),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
-                                        ),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                                      ),
-                                    );
-                                  },
-                                ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'To:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  AutocompleteTextField(
+                                    hintText: 'Enter receiver name',
+                                    controller: _to,
+                                    focusNode: _toFocus,
+                                    nextFocusNode: _originFocus,
+                                    prefixIcon: Icons.person,
+                                    suggestions: nameSuggestions,
+                                    onSelected: (_) {},
+                                  ),
+                                ],
                               ),
                             ),
+                          ],
+                        ),
+                      ),
 
-                            // Origin & Destination Row
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Origin',
+                      // Location Section
+                      _buildFormSection(
+                        '📍 Location Details',
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Origin:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 50,
                                     child: DropdownButtonFormField<String>(
                                       focusNode: _originFocus,
                                       isExpanded: true,
                                       decoration: InputDecoration(
-                                        labelText: 'Select origin city',
-                                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                                        prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
                                         ),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        filled: true,
+                                        fillColor: Colors.grey.withOpacity(0.05),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       ),
                                       value: _origin,
                                       items: locationOptions.map((String value) {
@@ -1055,37 +1239,51 @@ class _add_dataState extends State<add_data> {
                                         setState(() {
                                           _origin = newValue;
                                         });
-
-                                        Future.delayed(Duration(milliseconds: 100), () {
+                                        Future.delayed(const Duration(milliseconds: 100), () {
                                           FocusScope.of(context).requestFocus(_destinationFocus);
                                         });
                                       },
                                     ),
                                   ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Destination',
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Destination:',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.grey.shade700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  SizedBox(
+                                    height: 50,
                                     child: DropdownButtonFormField<String>(
                                       focusNode: _destinationFocus,
                                       isExpanded: true,
                                       decoration: InputDecoration(
-                                        labelText: 'Select destination city',
-                                        labelStyle: TextStyle(color: Colors.grey.shade600),
+                                        prefixIcon: const Icon(Icons.location_on, color: Colors.grey),
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
+                                          borderRadius: BorderRadius.circular(12),
+                                          borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
                                         ),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        filled: true,
+                                        fillColor: Colors.grey.withOpacity(0.05),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                                       ),
                                       value: _destination,
                                       items: locationOptions.map((String value) {
@@ -1098,350 +1296,198 @@ class _add_dataState extends State<add_data> {
                                         setState(() {
                                           _destination = newValue;
                                         });
-
-                                        Future.delayed(Duration(milliseconds: 100), () {
+                                        Future.delayed(const Duration(milliseconds: 100), () {
                                           FocusScope.of(context).requestFocus(_weightFocus);
                                         });
                                       },
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-
-                            // Contents Section
-                            _buildFormSection(
-                              label: 'Contents',
-                              child: Wrap(
-                                spacing: 12,
-                                children: [
-                                  _buildToggleButton(
-                                    label: 'Documents',
-                                    isSelected: selected_doc == 'Documents',
-                                    onPressed: () {
-                                      setState(() {
-                                        selected_doc = 'Documents';
-                                      });
-                                    },
-                                  ),
-                                  _buildToggleButton(
-                                    label: 'Non-Documents',
-                                    isSelected: selected_doc == 'Non-Docx',
-                                    onPressed: () {
-                                      setState(() {
-                                        selected_doc = 'Non-Docx';
-                                      });
-                                    },
-                                  ),
                                 ],
                               ),
                             ),
+                          ],
+                        ),
+                      ),
 
-                            // Weight Details Row
+                      // Shipment Details Section
+                      _buildFormSection(
+                        '📦 Shipment Details',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Row(
                               children: [
                                 Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Weight (kg)',
-                                    child: CommonTextField(
-                                      hintText: 'Enter weight',
-                                      controller: _weight,
-                                      keyboardType: TextInputType.number,
-                                      focusNode: _weightFocus,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Vol. Weight (kg)',
-                                    child: CommonTextField(
-                                      hintText: 'Enter volumetric weight',
-                                      controller: _volweight,
-                                      focusNode: _volWeightFocus,
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Pieces Details Row
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Pieces',
-                                    child: CommonTextField(
-                                      hintText: 'Enter number of pieces',
-                                      controller: _piece,
-                                      focusNode: _pieceFocus,
-                                      keyboardType: TextInputType.number,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: _buildFormSection(
-                                    label: 'Rate (₹)',
-                                    child: TextField(
-                                      controller: _rate,
-                                      focusNode: _rateFocus,
-                                      keyboardType: TextInputType.number,
-                                      textInputAction: TextInputAction.next,
-                                      onSubmitted: (_) {
-                                        FocusScope.of(context).requestFocus(_senderFocus);
-                                      },
-                                      decoration: InputDecoration(
-                                        hintText: 'Enter rate',
-                                        hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
-                                        ),
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            // Amount Calculation
-                            _buildFormSection(
-                              label: 'Amount',
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: ElevatedButton.icon(
-                                      onPressed: () {
-                                        setState(() {
-                                          if (_weight.text.isEmpty || _rate.text.isEmpty) {
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text("Please enter both weight and rate"),
-                                              ),
-                                            );
-                                            return;
-                                          }
-
-                                          final int weight = int.tryParse(_weight.text) ?? 0;
-                                          final int volWeight = int.tryParse(_volweight.text) ?? 0;
-                                          final int rate = int.tryParse(_rate.text) ?? 0;
-
-                                          if (volWeight == 0) {
-                                            _amount = weight * rate;
-                                          } else {
-                                            _amount = volWeight * rate;
-                                          }
-                                        });
-                                      },
-                                      icon: Icon(Icons.calculate),
-                                      label: Text('Calculate'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.blue.shade600,
-                                        foregroundColor: Colors.white,
-                                        padding: EdgeInsets.symmetric(vertical: 12),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Contents:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Container(
-                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.blue.shade50,
-                                      border: Border.all(color: Colors.blue.shade200),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Text(
-                                      '₹${_amount.toString()}',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xff2a3368),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Status Section
-                            _buildFormSection(
-                              label: 'Payment Status',
-                              child: Wrap(
-                                spacing: 12,
-                                children: [
-                                  _buildToggleButton(
-                                    label: 'Paid',
-                                    isSelected: selected_status == 'Paid',
-                                    onPressed: () {
-                                      setState(() {
-                                        selected_status = 'Paid';
-                                      });
-                                    },
-                                  ),
-                                  _buildToggleButton(
-                                    label: 'Unpaid',
-                                    isSelected: selected_status == 'Unpaid',
-                                    onPressed: () {
-                                      setState(() {
-                                        selected_status = 'Unpaid';
-                                      });
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Sender Section
-                            _buildFormSection(
-                              label: 'Sender',
-                              child: DropdownButtonFormField<String>(
-                                focusNode: _senderFocus,
-                                isExpanded: true,
-                                decoration: InputDecoration(
-                                  labelText: 'Select sender',
-                                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Colors.grey.shade300),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                    borderSide: BorderSide(color: Color(0xff2a3368), width: 2),
-                                  ),
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                ),
-                                value: selectedOption,
-                                items: senderOptions.map((String value) {
-                                  return DropdownMenuItem<String>(
-                                    value: value,
-                                    child: Text(value),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  setState(() {
-                                    selectedOption = newValue;
-                                  });
-
-                                  Future.delayed(Duration(milliseconds: 100), () {
-                                    FocusScope.of(context).requestFocus(_submitFocus);
-                                  });
-                                },
-                              ),
-                            ),
-
-                            // Action Buttons
-                            SizedBox(height: 32),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    focusNode: _submitFocus,
-                                    onPressed: () async {
-                                      bool? confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) {
-                                          return Shortcuts(
-                                            shortcuts: {
-                                              LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
-                                              LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
-                                            },
-                                            child: Actions(
-                                              actions: {
-                                                ActivateIntent: CallbackAction<ActivateIntent>(
-                                                  onInvoke: (intent) {
-                                                    Navigator.of(context).pop(true);
-                                                    return null;
-                                                  },
-                                                ),
-                                                DismissIntent: CallbackAction<DismissIntent>(
-                                                  onInvoke: (intent) {
-                                                    Navigator.of(context).pop(false);
-                                                    return null;
-                                                  },
-                                                ),
-                                              },
-                                              child: Focus(
-                                                autofocus: true,
-                                                child: AlertDialog(
-                                                  title: const Text("Confirm Submission"),
-                                                  content: const Text("Are you sure you want to submit this shipment data?"),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(12),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: GestureDetector(
+                                              onTap: () => setState(() => selected_doc = 'Documents'),
+                                              child: Container(
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: selected_doc == 'Documents' ? const Color(0xff2a3368) : Colors.white,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: selected_doc == 'Documents' ? const Color(0xff2a3368) : Colors.grey.shade300,
+                                                    width: 1.5,
                                                   ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () => Navigator.pop(context, false),
-                                                      child: const Text("Cancel"),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'Documents',
+                                                    style: TextStyle(
+                                                      color: selected_doc == 'Documents' ? Colors.white : const Color(0xff2a3368),
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
                                                     ),
-                                                    ElevatedButton(
-                                                      onPressed: () => Navigator.pop(context, true),
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor: Color(0xff2a3368),
-                                                        foregroundColor: Colors.white,
-                                                      ),
-                                                      child: const Text("Submit"),
-                                                    ),
-                                                  ],
+                                                  ),
                                                 ),
                                               ),
                                             ),
-                                          );
-                                        },
-                                      );
-
-                                      if (confirm ?? false) {
-                                        submitPodData();
-                                      }
-                                    },
-                                    icon: Icon(Icons.check_circle),
-                                    label: Text('Submit'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Color(0xff2a3368),
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: GestureDetector(
+                                              onTap: () => setState(() => selected_doc = 'Non-Docx'),
+                                              child: Container(
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: selected_doc == 'Non-Docx' ? const Color(0xff2a3368) : Colors.white,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: selected_doc == 'Non-Docx' ? const Color(0xff2a3368) : Colors.grey.shade300,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'Non-Docx',
+                                                    style: TextStyle(
+                                                      color: selected_doc == 'Non-Docx' ? Colors.white : const Color(0xff2a3368),
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 24),
                                 Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: submittedPod == null
-                                        ? null
-                                        : () => generateAndPreviewInvoice(
-                                      context,
-                                      submittedPod!,
-                                    ),
-                                    icon: Icon(Icons.preview),
-                                    label: Text('Preview Invoice'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue.shade600,
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Weight (kg):',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 8),
+                                      CommonTextField(
+                                        hintText: 'e.g., 10.5',
+                                        controller: _weight,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        focusNode: _weightFocus,
+                                        prefixIcon: Icons.scale,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _weight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _weight.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _weight.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Vol. Weight (kg):',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      CommonTextField(
+                                        hintText: 'e.g., 8.75',
+                                        controller: _volweight,
+                                        focusNode: _volWeightFocus,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        prefixIcon: Icons.square_foot,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _volweight.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _volweight.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _volweight.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Pieces:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      CommonTextField(
+                                        hintText: 'pcs',
+                                        controller: _piece,
+                                        focusNode: _pieceFocus,
+                                        keyboardType: TextInputType.number,
+                                        prefixIcon: Icons.inventory_2,
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
@@ -1449,67 +1495,404 @@ class _add_dataState extends State<add_data> {
                           ],
                         ),
                       ),
-                    ),
-                  ],
+
+                      // Billing Section
+                      _buildFormSection(
+                        '💰 Billing',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Rate (₹/kg):',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      CommonTextField(
+                                        hintText: 'e.g., 50.75',
+                                        controller: _rate,
+                                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                        focusNode: _rateFocus,
+                                        prefixIcon: Icons.currency_rupee,
+                                        onChanged: (value) {
+                                          // Limit to 2 decimal places
+                                          if (value.contains('.')) {
+                                            List<String> parts = value.split('.');
+                                            if (parts[1].length > 2) {
+                                              _rate.text = '${parts[0]}.${parts[1].substring(0, 2)}';
+                                              _rate.selection = TextSelection.fromPosition(
+                                                TextPosition(offset: _rate.text.length),
+                                              );
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Amount:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Container(
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: Colors.blue.withOpacity(0.1),
+                                          border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Padding(
+                                              padding: const EdgeInsets.only(left: 16),
+                                              child: Text(
+                                                '₹ ${_amount.toStringAsFixed(2)}',
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Color(0xff2a3368),
+                                                ),
+                                              ),
+                                            ),
+                                            GestureDetector(
+                                              onTap: () {
+                                                setState(() {
+                                                  if (_weight.text.isEmpty || _rate.text.isEmpty) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text("Please enter weight and rate")),
+                                                    );
+                                                    return;
+                                                  }
+                                                  final double weight = double.tryParse(_weight.text) ?? 0;
+                                                  final double volWeight = double.tryParse(_volweight.text) ?? 0;
+                                                  final double rate = double.tryParse(_rate.text) ?? 0;
+                                                  if (volWeight == 0) {
+                                                    _amount = weight * rate;
+                                                  } else {
+                                                    _amount = volWeight * rate;
+                                                  }
+                                                });
+                                              },
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(right: 16),
+                                                child: Icon(Icons.calculate, color: Colors.blue.shade400, size: 20),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Status & Sender Section
+                      _buildFormSection(
+                        '✅ Status & Sender',
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Status:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: GestureDetector(
+                                              onTap: () => setState(() => selected_status = 'Paid'),
+                                              child: Container(
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: selected_status == 'Paid' ? const Color(0xff2a3368) : Colors.white,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: selected_status == 'Paid' ? const Color(0xff2a3368) : Colors.grey.shade300,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'Paid',
+                                                    style: TextStyle(
+                                                      color: selected_status == 'Paid' ? Colors.white : const Color(0xff2a3368),
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: GestureDetector(
+                                              onTap: () => setState(() => selected_status = 'Unpaid'),
+                                              child: Container(
+                                                height: 48,
+                                                decoration: BoxDecoration(
+                                                  color: selected_status == 'Unpaid' ? const Color(0xff2a3368) : Colors.white,
+                                                  borderRadius: BorderRadius.circular(12),
+                                                  border: Border.all(
+                                                    color: selected_status == 'Unpaid' ? const Color(0xff2a3368) : Colors.grey.shade300,
+                                                    width: 1.5,
+                                                  ),
+                                                ),
+                                                child: Center(
+                                                  child: Text(
+                                                    'Unpaid',
+                                                    style: TextStyle(
+                                                      color: selected_status == 'Unpaid' ? Colors.white : const Color(0xff2a3368),
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 13,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 24),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Sender:',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      SizedBox(
+                                        height: 50,
+                                        child: DropdownButtonFormField<String>(
+                                          focusNode: _senderFocus,
+                                          decoration: InputDecoration(
+                                            prefixIcon: const Icon(Icons.person, color: Colors.grey),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: BorderSide(color: Colors.grey.shade300, width: 1.5),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(12),
+                                              borderSide: const BorderSide(color: Color(0xff2a3368), width: 2),
+                                            ),
+                                            filled: true,
+                                            fillColor: Colors.grey.withOpacity(0.05),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                          ),
+                                          value: selectedOption,
+                                          items: senderOptions.map((String value) {
+                                            return DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            );
+                                          }).toList(),
+                                          onChanged: (String? newValue) {
+                                            setState(() {
+                                              selectedOption = newValue;
+                                            });
+                                            Future.delayed(const Duration(milliseconds: 100), () {
+                                              FocusScope.of(context).requestFocus(_submitFocus);
+                                            });
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Action Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xff2a3368), Color(0xff3d4a8a)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xff2a3368).withOpacity(0.3),
+                                    blurRadius: 12,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  focusNode: _submitFocus,
+                                  onTap: () async {
+                                    bool? confirm = await showDialog<bool>(
+                                      context: context,
+                                      builder: (context) {
+                                        return Shortcuts(
+                                          shortcuts: {
+                                            LogicalKeySet(LogicalKeyboardKey.enter): const ActivateIntent(),
+                                            LogicalKeySet(LogicalKeyboardKey.escape): const DismissIntent(),
+                                          },
+                                          child: Actions(
+                                            actions: {
+                                              ActivateIntent: CallbackAction<ActivateIntent>(
+                                                onInvoke: (intent) {
+                                                  Navigator.of(context).pop(true);
+                                                  return null;
+                                                },
+                                              ),
+                                              DismissIntent: CallbackAction<DismissIntent>(
+                                                onInvoke: (intent) {
+                                                  Navigator.of(context).pop(false);
+                                                  return null;
+                                                },
+                                              ),
+                                            },
+                                            child: Focus(
+                                              autofocus: true,
+                                              child: AlertDialog(
+                                                title: const Text("Are you sure?"),
+                                                content: const Text("Do you want to submit this data?"),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () => Navigator.pop(context, false),
+                                                    child: const Text("No"),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () => Navigator.pop(context, true),
+                                                    child: const Text("Yes"),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+
+                                    if (confirm ?? false) {
+                                      submitPodData();
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: const Center(
+                                    child: Text(
+                                      'Submit POD',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Container(
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.purple.shade900,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.purple.shade900.withOpacity(0.3),
+                                    blurRadius: 12,
+                                    spreadRadius: 0,
+                                    offset: const Offset(0, 4),
+                                  )
+                                ],
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: submittedPod == null
+                                      ? null
+                                      : () => generateAndPreviewInvoice(context, submittedPod!),
+                                  borderRadius: BorderRadius.circular(14),
+                                  child: const Center(
+                                    child: Text(
+                                      'Preview Invoice',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // Helper method to build form sections with labels
-  Widget _buildFormSection({
-    required String label,
-    required Widget child,
-  }) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Color(0xff2a3368),
-              letterSpacing: 0.5,
-            ),
-          ),
-          SizedBox(height: 8),
-          child,
-        ],
-      ),
-    );
-  }
-
-  // Helper method to build toggle buttons
-  Widget _buildToggleButton({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onPressed,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? Color(0xff2a3368) : Colors.grey.shade100,
-        foregroundColor: isSelected ? Colors.white : Color(0xff2a3368),
-        elevation: isSelected ? 2 : 0,
-        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(
-            color: isSelected ? Color(0xff2a3368) : Colors.grey.shade300,
-            width: 1,
-          ),
-        ),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
       ),
     );
   }

@@ -1,3 +1,3 @@
 class ApiConfig {
-  static const String baseUrl = 'http://localhost:3000'; // change once
+  static const String baseUrl = 'https://rajpurohit-backend-1.onrender.com'; // change once
 }

@@ -162,7 +162,7 @@ class _homepageState extends State<homepage> with TickerProviderStateMixin {
                 end: Alignment.centerRight,
               ).createShader(bounds),
               child: const Text(
-                'RAJPUROHIT OTC',
+                'RAJPUROHIT OTC SERVICE',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
